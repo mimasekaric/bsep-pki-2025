@@ -19,7 +19,7 @@ public class CertificateController {
 
     private final CertificateService certificateService;
 
-    @PostMapping("/issue-root")
+    @PostMapping("/issue-root") // todo: dodati pre authorize
     public ResponseEntity<?> issueRoot(@RequestBody CertificateIssueDTO dto) {
         try {
             // TODO: U realnoj aplikaciji, ID admina bi se dobio iz Spring Security Context-a
