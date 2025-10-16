@@ -71,7 +71,7 @@ public class CertificateService {
         return saveCertificateEntity(cert, admin, keystore, CertificateType.ROOT, serialNumber.toString());
     }
 
-    @Transactional
+    /*@Transactional
     public Object issueCertificate(CertificateIssueDTO dto) throws Exception {
         // 1. Validacija i učitavanje izdavaoca
         Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
@@ -127,6 +127,25 @@ public class CertificateService {
             newChain[0] = newCert;
             System.arraycopy(issuerChain, 0, newChain, 1, issuerChain.length);
 
+
+            try {
+                // 1. Provera potpisa novog sertifikata sa javnim ključem izdavaoca
+                newCert.verify(issuerCertX509.getPublicKey());
+
+                // 2. Provera validnosti novog sertifikata u odnosu na vreme
+                newCert.checkValidity();
+
+                // Ako oba prođu, problem je negde u KeyStore API-ju ili u strukturi samog issuerChain
+                System.out.println("Potpis i validnost su OK.");
+            } catch (Exception ex) {
+                // Ovo će vam reći da li je problem u potpisu ili nečemu sličnom.
+                System.err.println("Verifikacija lanca neuspešna: " + ex.getMessage());
+                throw ex;
+            }
+
+
+
+
             ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
             System.out.println("Saving CA certificate with private key. Alias: " + alias);
 
@@ -150,8 +169,139 @@ public class CertificateService {
             // Vraćamo i sertifikat i privatni ključ
             return new CertificateWithPrivateKeyDTO(new CertificateDetailsDTO(certEntity), privateKeyPem);
         }
-    }
+    }*/
 
+    @Transactional
+    public Object issueCertificate(CertificateIssueDTO dto) throws Exception {
+
+        // =================================================================
+        // =========== 1. Validacija i učitavanje izdavaoca ================
+        // =================================================================
+        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
+        User subjectUser = userRepository.findById(dto.getSubjectUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Subject user not found with ID: " + dto.getSubjectUserId()));
+
+        Keystore keystore = issuerCertData.getKeystore();
+        String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+        PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(
+                keystore.getId(),
+                password.toCharArray(),
+                issuerCertData.getAlias()
+        );
+        java.security.cert.Certificate[] issuerChain = keystoreService.getCertificateChain(
+                keystore.getId(),
+                password.toCharArray(),
+                issuerCertData.getAlias()
+        );
+        X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
+
+        // LOGOVANJE #1: Provera Issuer Lanca (Očekujemo dužinu 1 jer je Root)
+        System.out.println("--- LOG [1]: Issuer Provera ---");
+        System.out.println("Issuer Cert Alias: " + issuerCertData.getAlias());
+        System.out.println("Issuer Chain Length: " + issuerChain.length);
+
+        // *** DODATNI LOG: Ispis detalja lanca dobijenog od Root-a ***
+        for (int i = 0; i < issuerChain.length; i++) {
+            X509Certificate certInChain = (X509Certificate) issuerChain[i];
+            System.out.println("  -> Lanac[" + i + "] Subject: " + certInChain.getSubjectX500Principal().getName());
+            System.out.println("  -> Lanac[" + i + "] Issuer:  " + certInChain.getIssuerX500Principal().getName());
+        }
+        // ***************************************************************
+
+        System.out.println("Issuer Cert Not After: " + issuerCertX509.getNotAfter());
+        // Provera ključnih osobina Izdavaoca
+        try {
+            boolean[] keyUsage = issuerCertX509.getKeyUsage();
+            System.out.println("Issuer Basic Constraints (CA flag): " + (issuerCertX509.getBasicConstraints() > -1));
+            System.out.println("Issuer KeyUsage[keyCertSign]: " + (keyUsage != null && keyUsage.length > 5 && keyUsage[5]));
+        } catch (Exception e) {
+            System.err.println("Greska pri citanju Issuer sertifikata (KeyUsage/Constraints): " + e.getMessage());
+        }
+        System.out.println("-------------------------------------");
+
+
+        // =================================================================
+        // =========== 2 & 3. Generisanje podataka i kreiranje sertifikata =
+        // =================================================================
+        KeyPair subjectKeyPair = cryptoService.generateRSAKeyPair();
+        X500Name subjectName = buildX500NameFromDto(dto);
+        X500Name issuerName = new X500Name(issuerCertX509.getSubjectX500Principal().getName());
+        BigInteger serialNumber = new BigInteger(128, new SecureRandom());
+
+        boolean isCa = subjectUser.getRole() == UserRole.ADMIN || subjectUser.getRole() == UserRole.CA_USER;
+        int keyUsage = isCa ?
+                (KeyUsage.keyCertSign | KeyUsage.cRLSign) :
+                (KeyUsage.digitalSignature | KeyUsage.keyEncipherment);
+
+        X509Certificate newCert = certificateFactory.createCertificate(
+                subjectName,
+                issuerName,
+                subjectKeyPair.getPublic(),
+                issuerPrivateKey,
+                dto.getValidFrom(),
+                dto.getValidTo(),
+                serialNumber,
+                isCa,
+                keyUsage
+        );
+
+        // =================================================================
+        // =========== 4. Čuvanje u keystore (Kritičan deo) ================
+        // =================================================================
+        String alias = serialNumber.toString();
+        KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
+
+        if (isCa) {
+            // SLUČAJ A: CA sertifikat (Intermediate)
+
+            // LOGOVANJE #2: Test Potpisa i Validnosti (potvrđuje da je kriptografija OK)
+            try {
+                newCert.verify(issuerCertX509.getPublicKey());
+                newCert.checkValidity();
+                System.out.println("LOG [2]: Potpis i validnost su OK.");
+            } catch (Exception ex) {
+                System.err.println("LOG [2] GRESKA: Verifikacija lanca neuspešna: " + ex.getMessage());
+                throw ex;
+            }
+
+            // -----------------------------------------------------------------------------------
+            // REŠENJE: KeyStore-u se predaje lanac koji sadrži SAMO novi sertifikat.
+            // KeyStore će kasnije sam rekonstruisati puni lanac sa Root-om.
+            // -----------------------------------------------------------------------------------
+            java.security.cert.Certificate[] newChain = new java.security.cert.Certificate[1];
+            newChain[0] = newCert; // Samo novi Intermediate CA
+            // -----------------------------------------------------------------------------------
+
+            System.out.println("LOG [3]: New Chain Length (za KeyStore): " + newChain.length);
+            System.out.println("LOG [3]: New Cert Subject: " + newCert.getSubjectX500Principal().getName());
+
+            // Pokušaj čuvanja. Ako ovo puca, greška je u KeyStore validaciji lanca.
+            ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
+            System.out.println("LOG [4]: Saving Intermediate CA certificate with private key. Alias: " + alias + " - Uspesno.");
+
+            keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+            Certificate certEntity = saveCertificateEntity(newCert, subjectUser, keystore, CertificateType.INTERMEDIATE, issuerCertData.getSerialNumber());
+
+            // Vraćamo samo entitet (bez privatnog ključa)
+            return certEntity;
+
+        } else {
+            // SLUČAJ B: End-Entity sertifikat
+            // Nema potrebe za lancem za setCertificateEntry, jer se ključ ne čuva
+            ks.setCertificateEntry(alias, newCert);
+            System.out.println("LOG [4]: Saving End-Entity certificate WITHOUT private key. Alias: " + alias + " - Uspesno.");
+
+            keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+            Certificate certEntity = saveCertificateEntity(newCert, subjectUser, keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
+
+            // Pretvaranje privatnog ključa u PEM format (radi lakšeg preuzimanja)
+            String privateKeyPem = cryptoService.privateKeyToPem(subjectKeyPair.getPrivate());
+
+            // Vraćamo i sertifikat i privatni ključ
+            return new CertificateWithPrivateKeyDTO(new CertificateDetailsDTO(certEntity), privateKeyPem);
+        }
+    }
 
     @Transactional
     public Certificate issueCertificate2(CertificateIssueDTO dto) throws Exception {

@@ -8,6 +8,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.Base64;
 import java.util.UUID;
@@ -45,9 +46,20 @@ public class CryptoService {
         return new String(cipher.doFinal(decodedBytes));
     }
 
-    private SecretKey getMasterKey() {
+    /*private SecretKey getMasterKey() {
         byte[] decodedKey = Base64.getDecoder().decode(masterKeyString);
         return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+    }*/
+    private SecretKey getMasterKey() {
+        if (masterKeyString.length() != 32) {
+            // Logujte upozorenje ili bacite Exception ako ključ nije 32 znaka
+            throw new IllegalArgumentException("Master Key must be 32 characters long for AES-256.");
+        }
+
+        // **Nema Base64 dekodiranja!** Kreiranje SecretKey iz bajtova Stringa.
+        byte[] keyBytes = masterKeyString.getBytes(StandardCharsets.UTF_8);
+
+        return new SecretKeySpec(keyBytes, "AES");
     }
 
     public String privateKeyToPem(PrivateKey privateKey) throws IOException {
