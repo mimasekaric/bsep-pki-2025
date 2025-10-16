@@ -1,10 +1,13 @@
 package com.bsep.pki.services;
 
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.security.*;
 import java.util.Base64;
 import java.util.UUID;
@@ -45,5 +48,13 @@ public class CryptoService {
     private SecretKey getMasterKey() {
         byte[] decodedKey = Base64.getDecoder().decode(masterKeyString);
         return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
+    }
+
+    public String privateKeyToPem(PrivateKey privateKey) throws IOException {
+        StringWriter writer = new StringWriter();
+        try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
+            pemWriter.writeObject(privateKey);
+        }
+        return writer.toString();
     }
 }

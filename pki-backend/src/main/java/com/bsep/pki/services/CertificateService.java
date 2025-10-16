@@ -1,6 +1,8 @@
 package com.bsep.pki.services;
 
 
+import com.bsep.pki.dtos.CertificateDetailsDTO;
+import com.bsep.pki.dtos.CertificateWithPrivateKeyDTO;
 import com.bsep.pki.enums.CertificateType;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.*;
@@ -19,6 +21,7 @@ import org.bouncycastle.asn1.x509.KeyUsage;
 import org.springframework.stereotype.Service;
 import java.math.BigInteger;
 import java.security.KeyPair;
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -69,7 +72,89 @@ public class CertificateService {
     }
 
     @Transactional
-    public Certificate issueCertificate(CertificateIssueDTO dto) throws Exception {
+    public Object issueCertificate(CertificateIssueDTO dto) throws Exception {
+        // 1. Validacija i učitavanje izdavaoca
+        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
+        User subjectUser = userRepository.findById(dto.getSubjectUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Subject user not found with ID: " + dto.getSubjectUserId()));
+
+        Keystore keystore = issuerCertData.getKeystore();
+        String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+        PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(
+                keystore.getId(),
+                password.toCharArray(),
+                issuerCertData.getAlias()
+        );
+        java.security.cert.Certificate[] issuerChain = keystoreService.getCertificateChain(
+                keystore.getId(),
+                password.toCharArray(),
+                issuerCertData.getAlias()
+        );
+        X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
+
+        // 2. Generisanje podataka za novi sertifikat
+        KeyPair subjectKeyPair = cryptoService.generateRSAKeyPair();
+        X500Name subjectName = buildX500NameFromDto(dto);
+        X500Name issuerName = new X500Name(issuerCertX509.getSubjectX500Principal().getName());
+        BigInteger serialNumber = new BigInteger(128, new SecureRandom());
+
+        boolean isCa = subjectUser.getRole() == UserRole.ADMIN || subjectUser.getRole() == UserRole.CA_USER;
+        int keyUsage = isCa ?
+                (KeyUsage.keyCertSign | KeyUsage.cRLSign) :
+                (KeyUsage.digitalSignature | KeyUsage.keyEncipherment);
+
+        // 3. Kreiranje sertifikata
+        X509Certificate newCert = certificateFactory.createCertificate(
+                subjectName,
+                issuerName,
+                subjectKeyPair.getPublic(),
+                issuerPrivateKey,
+                dto.getValidFrom(),
+                dto.getValidTo(),
+                serialNumber,
+                isCa,
+                keyUsage
+        );
+
+        // 4. Čuvanje u keystore
+        String alias = serialNumber.toString();
+        KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
+
+        if (isCa) {
+            // SLUČAJ A: CA sertifikat (Intermediate)
+            java.security.cert.Certificate[] newChain = new java.security.cert.Certificate[issuerChain.length + 1];
+            newChain[0] = newCert;
+            System.arraycopy(issuerChain, 0, newChain, 1, issuerChain.length);
+
+            ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
+            System.out.println("Saving CA certificate with private key. Alias: " + alias);
+
+            keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+            Certificate certEntity = saveCertificateEntity(newCert, subjectUser, keystore, CertificateType.INTERMEDIATE, issuerCertData.getSerialNumber());
+
+            // Vraćamo samo entitet (bez privatnog ključa)
+            return certEntity;
+
+        } else {
+            // SLUČAJ B: End-Entity sertifikat
+            ks.setCertificateEntry(alias, newCert);
+            System.out.println("Saving End-Entity certificate WITHOUT private key. Alias: " + alias);
+
+            keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+            Certificate certEntity = saveCertificateEntity(newCert, subjectUser, keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
+
+            // Pretvaranje privatnog ključa u PEM format (radi lakšeg preuzimanja)
+            String privateKeyPem = cryptoService.privateKeyToPem(subjectKeyPair.getPrivate());
+
+            // Vraćamo i sertifikat i privatni ključ
+            return new CertificateWithPrivateKeyDTO(new CertificateDetailsDTO(certEntity), privateKeyPem);
+        }
+    }
+
+
+    @Transactional
+    public Certificate issueCertificate2(CertificateIssueDTO dto) throws Exception {
         // 1. Validacija ulaznih podataka
         Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
         User subjectUser = userRepository.findById(dto.getSubjectUserId())
