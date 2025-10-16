@@ -15,6 +15,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,24 +33,44 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponseDTO> register(@RequestBody UserRegistrationDTO userRegistrationDTO) {
-        return authService.register(userRegistrationDTO);
+    public ResponseEntity<?> register(@RequestBody UserRegistrationDTO userRegistrationDTO) {
+        try {
+            return authService.register(userRegistrationDTO);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("status", "error");
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<Void> verifyEmail(@RequestParam("token") String token) {
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam("token") String token) {
         String result = tokenService.validateVerificationToken(token);
-
-        if (result.equals("valid")) {
-            System.out.println("VERIFIKOVAO SE");
-            return ResponseEntity.status(HttpStatus.FOUND)
-//                    .location(URI.create("http://localhost:4200/login?verified=true"))
-                    .build();
-        } else {
-            System.out.println("nije se vevriikovao");
-            return ResponseEntity.status(HttpStatus.FOUND)
-//                    .location(URI.create("http://localhost:4200/invalid-token?error=true"))
-                    .build();
+        
+        Map<String, String> response = new HashMap<>();
+        
+        switch (result) {
+            case "valid":
+                response.put("status", "success");
+                response.put("message", "Email uspešno verifikovan!");
+                return ResponseEntity.ok(response);
+                
+            case "expired":
+                response.put("status", "error");
+                response.put("message", "Aktivacioni link je istekao. Molimo registrujte se ponovo.");
+                return ResponseEntity.badRequest().body(response);
+                
+            case "already_used":
+                response.put("status", "error");
+                response.put("message", "Aktivacioni link je već korišćen.");
+                return ResponseEntity.badRequest().body(response);
+                
+            case "invalid":
+            default:
+                response.put("status", "error");
+                response.put("message", "Neispravan aktivacioni link.");
+                return ResponseEntity.badRequest().body(response);
         }
     }
 }
