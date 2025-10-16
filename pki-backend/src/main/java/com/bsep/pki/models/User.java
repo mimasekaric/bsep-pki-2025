@@ -33,6 +33,9 @@ public class User {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
+
     private String verificationToken;
 
 }

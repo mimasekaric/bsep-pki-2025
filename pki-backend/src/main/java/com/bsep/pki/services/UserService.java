@@ -1,6 +1,8 @@
 package com.bsep.pki.services;
 
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
+import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
+import com.bsep.pki.dtos.requests.ChangePasswordDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.events.OnRegistrationCompletedEvent;
@@ -32,6 +34,8 @@ public class UserService implements IUserService, UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final PasswordGeneratorService passwordGenerator;
+    private final EmailService emailService;
 
     @Override
     @Transactional
@@ -73,6 +77,83 @@ public class UserService implements IUserService, UserDetailsService {
                 true,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
+    }
+
+    @Transactional
+    public UserResponseDTO createCAUser(CAUserRegistrationDTO caUserDTO, String adminEmail) {
+        // Proveri da li admin postoji i ima ADMIN role
+        User admin = userRepository.findByEmail(adminEmail)
+            .orElseThrow(() -> new RuntimeException("Admin not found"));
+        
+        if (admin.getRole() != UserRole.ADMIN) {
+            throw new RuntimeException("Only administrators can create CA users");
+        }
+        
+        // Proveri da li email već postoji
+        if (userRepository.findByEmail(caUserDTO.getEmail()).isPresent()) {
+            throw new RuntimeException("User with this email already exists");
+        }
+        
+        // Generiši nasumičnu lozinku
+        String randomPassword = passwordGenerator.generateRandomPassword(12);
+        
+        // Kreiraj CA korisnika
+        User caUser = new User();
+        caUser.setName(caUserDTO.getFirstName());
+        caUser.setSurname(caUserDTO.getLastName());
+        caUser.setEmail(caUserDTO.getEmail());
+        caUser.setOrganisation(caUserDTO.getOrganization());
+        caUser.setPassword(passwordEncoder.encode(randomPassword));
+        caUser.setRole(UserRole.CA_USER);
+        caUser.setEnabled(true); // CA korisnici su odmah aktivni
+        caUser.setMustChangePassword(true); // Mora da promeni lozinku
+        
+        User savedUser = userRepository.save(caUser);
+        
+        // Pošalji email sa lozinkom
+        sendCAUserCredentials(caUser, randomPassword);
+        
+        return userMapper.toDto(savedUser);
+    }
+
+    private void sendCAUserCredentials(User caUser, String password) {
+        String subject = "CA User Account Created";
+        String message = String.format(
+            "Your CA user account has been created.\n" +
+            "Email: %s\n" +
+            "Temporary Password: %s\n\n" +
+            "You must change this password on your first login.\n" +
+            "Login at: http://localhost:4200/login",
+            caUser.getEmail(),
+            password
+        );
+        
+        emailService.sendEmail(caUser.getEmail(), subject, message);
+    }
+
+    public void changePassword(ChangePasswordDTO changePasswordDTO, String userEmail) {
+        User user = userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Proveri trenutnu lozinku
+        if (!passwordEncoder.matches(changePasswordDTO.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+        
+        // Proveri da li se nova lozinka i potvrda poklapaju
+        if (!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {
+            throw new RuntimeException("New password and confirmation do not match");
+        }
+        
+        // Proveri da li je nova lozinka dovoljno jaka
+        if (changePasswordDTO.getNewPassword().length() < 8) {
+            throw new RuntimeException("New password must be at least 8 characters long");
+        }
+        
+        // Ažuriraj lozinku
+        user.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
     }
 
 }

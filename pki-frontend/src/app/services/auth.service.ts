@@ -29,6 +29,19 @@ export interface User {
   role: string;
 }
 
+export interface CAUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -149,5 +162,23 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem('jwt_token');
+  }
+
+  createCAUser(caUserData: CAUserRequest): Observable<any> {
+    const token = this.getToken();
+    return this.http.post(`${this.apiUrl}/create-ca-user`, caUserData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }
+
+  changePassword(changePasswordData: ChangePasswordRequest): Observable<any> {
+    const token = this.getToken();
+    return this.http.post(`${this.apiUrl}/change-password`, changePasswordData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
   }
 }

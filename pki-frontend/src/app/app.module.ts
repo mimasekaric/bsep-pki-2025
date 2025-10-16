@@ -8,13 +8,17 @@ import { RegisterComponent } from './components/register/register.component';
 import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
 import { HttpClientModule } from '@angular/common/http';
 import { AuthGuard } from './auth.guard';
+import { AdminComponent } from './components/admin/admin.component';
+import { ChangePasswordComponent } from './components/change-password/change-password.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     LoginComponent,
     RegisterComponent,
-    EmailVerificationComponent
+    EmailVerificationComponent,
+    AdminComponent,
+    ChangePasswordComponent
   ],
   imports: [
     BrowserModule,
