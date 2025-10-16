@@ -39,8 +39,8 @@ public class UserService implements IUserService, UserDetailsService {
         Optional<User> existingUser = userRepository.findByEmail(userRegistrationDTO.getEmail());
 
         if (existingUser.isPresent()) {
-            throw new EntityNotFoundException(
-                    String.format("User with this email not found :(")
+            throw new RuntimeException(
+                    String.format("User with email '%s' already exists!", userRegistrationDTO.getEmail())
             );
         }
 

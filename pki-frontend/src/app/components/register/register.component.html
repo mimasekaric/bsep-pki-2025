@@ -1,0 +1,141 @@
+<div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Registracija</h2>
+        <p>Kreirajte novi nalog</p>
+      </div>
+  
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="firstName">Ime</label>
+            <input 
+              type="text" 
+              id="firstName" 
+              formControlName="firstName"
+              class="form-control"
+              [class.error]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched"
+              placeholder="Vaše ime"
+            >
+            <div *ngIf="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched" class="error-message">
+              <span *ngIf="registerForm.get('firstName')?.errors?.['required']">Ime je obavezno</span>
+              <span *ngIf="registerForm.get('firstName')?.errors?.['minlength']">Ime mora imati najmanje 2 karaktera</span>
+            </div>
+          </div>
+  
+          <div class="form-group">
+            <label for="lastName">Prezime</label>
+            <input 
+              type="text" 
+              id="lastName" 
+              formControlName="lastName"
+              class="form-control"
+              [class.error]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched"
+              placeholder="Vaše prezime"
+            >
+            <div *ngIf="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched" class="error-message">
+              <span *ngIf="registerForm.get('lastName')?.errors?.['required']">Prezime je obavezno</span>
+              <span *ngIf="registerForm.get('lastName')?.errors?.['minlength']">Prezime mora imati najmanje 2 karaktera</span>
+            </div>
+          </div>
+        </div>
+  
+        <div class="form-group">
+          <label for="email">Email adresa</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            [class.error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+            placeholder="unesite@email.com"
+          >
+          <div *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched" class="error-message">
+            <span *ngIf="registerForm.get('email')?.errors?.['required']">Email je obavezan</span>
+            <span *ngIf="registerForm.get('email')?.errors?.['email']">Unesite validan email</span>
+          </div>
+        </div>
+  
+        <div class="form-group">
+          <label for="organization">Organizacija</label>
+          <input 
+            type="text" 
+            id="organization" 
+            formControlName="organization"
+            class="form-control"
+            [class.error]="registerForm.get('organization')?.invalid && registerForm.get('organization')?.touched"
+            placeholder="Naziv organizacije"
+          >
+          <div *ngIf="registerForm.get('organization')?.invalid && registerForm.get('organization')?.touched" class="error-message">
+            <span *ngIf="registerForm.get('organization')?.errors?.['required']">Organizacija je obavezna</span>
+            <span *ngIf="registerForm.get('organization')?.errors?.['minlength']">Organizacija mora imati najmanje 2 karaktera</span>
+          </div>
+        </div>
+  
+        <div class="form-group">
+          <label for="password">Lozinka</label>
+          <input 
+            type="password" 
+            id="password" 
+            formControlName="password"
+            class="form-control"
+            [class.error]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+            placeholder="Unesite lozinku"
+            (input)="checkPasswordStrength()"
+          >
+          <div *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched" class="error-message">
+            <span *ngIf="registerForm.get('password')?.errors?.['required']">Lozinka je obavezna</span>
+            <span *ngIf="registerForm.get('password')?.errors?.['minlength']">Lozinka mora imati najmanje 8 karaktera</span>
+            <span *ngIf="registerForm.get('password')?.errors?.['pattern']">Lozinka mora sadržavati velika slova, brojeve i specijalne karaktere</span>
+          </div>
+          
+          <!-- Password Strength Indicator -->
+          <div *ngIf="passwordStrength" class="password-strength">
+            <div class="strength-bar">
+              <div class="strength-fill" [class]="'strength-' + passwordStrength.level"></div>
+            </div>
+            <div class="strength-text" [class]="'strength-' + passwordStrength.level">
+              {{ passwordStrength.text }}
+            </div>
+          </div>
+        </div>
+  
+        <div class="form-group">
+          <label for="confirmPassword">Potvrdite lozinku</label>
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            formControlName="confirmPassword"
+            class="form-control"
+            [class.error]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+            placeholder="Potvrdite lozinku"
+          >
+          <div *ngIf="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched" class="error-message">
+            <span *ngIf="registerForm.get('confirmPassword')?.errors?.['required']">Potvrda lozinke je obavezna</span>
+            <span *ngIf="registerForm.get('confirmPassword')?.errors?.['passwordMismatch']">Lozinke se ne poklapaju</span>
+          </div>
+        </div>
+  
+        <div *ngIf="errorMessage" class="error-message global-error">
+          {{ errorMessage }}
+        </div>
+  
+        <div *ngIf="successMessage" class="success-message">
+          {{ successMessage }}
+        </div>
+  
+        <button 
+          type="submit" 
+          class="auth-button"
+          [disabled]="registerForm.invalid || isLoading"
+        >
+          <span *ngIf="!isLoading">Registrujte se</span>
+          <span *ngIf="isLoading">Registracija...</span>
+        </button>
+      </form>
+  
+      <div class="auth-footer">
+        <p>Već imate nalog? <a (click)="goToLogin()" class="auth-link">Prijavite se</a></p>
+      </div>
+    </div>
+  </div>

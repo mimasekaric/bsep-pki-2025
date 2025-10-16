@@ -1,6 +1,7 @@
 package com.bsep.pki.events;
 
 import com.bsep.pki.models.User;
+import com.bsep.pki.models.VerificationToken;
 import com.bsep.pki.services.EmailService;
 import com.bsep.pki.services.VerificationTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +26,17 @@ public class RegistrationListener implements ApplicationListener<OnRegistrationC
 
     private void confirmRegistration(OnRegistrationCompletedEvent event) {
         User user = event.getUser();
-        String token = UUID.randomUUID().toString();
-        tokenService.createVerificationToken(user, token);
+        
+        // Kreiraj token sa vremenskim ograničenjem
+        VerificationToken verificationToken = tokenService.createVerificationTokenWithExpiry(user);
+        
+        // Takođe kreiraj token u starom sistemu za kompatibilnost
+        String oldToken = UUID.randomUUID().toString();
+        tokenService.createVerificationToken(user, oldToken);
 
         String recipientAddress = user.getEmail();
         String subject = "Email Verification";
-        String confirmationUrl = "http://localhost:8080/api/auth/verify-email?token=" + token;
+        String confirmationUrl = "http://localhost:4200/verify-email?token=" + verificationToken.getToken();
         String message = "Click the link to verify your email: " + confirmationUrl;
 
         emailService.sendEmail(recipientAddress, subject, message);
