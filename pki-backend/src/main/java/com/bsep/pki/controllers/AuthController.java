@@ -1,20 +1,17 @@
 package com.bsep.pki.controllers;
 
-import ch.qos.logback.core.net.SyslogOutputStream;
+import com.bsep.pki.dtos.requests.ForgotPasswordRequest;
 import com.bsep.pki.dtos.requests.LoginRequestDTO;
+import com.bsep.pki.dtos.requests.ResetPasswordRequest;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
-import com.bsep.pki.dtos.responses.UserResponseDTO;
+import com.bsep.pki.exceptions.InvalidTokenException;
+import com.bsep.pki.services.PasswordResetService;
 import com.bsep.pki.services.VerificationTokenService;
 import com.bsep.pki.services.interfaces.IAuthService;
-import com.bsep.pki.services.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,7 +22,7 @@ public class AuthController {
 
     private final IAuthService authService;
     private final VerificationTokenService tokenService;
-
+    private final PasswordResetService passwordResetService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
@@ -71,6 +68,28 @@ public class AuthController {
                 response.put("status", "error");
                 response.put("message", "Neispravan aktivacioni link.");
                 return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        // Kontroler samo delegira poziv servisu.
+        // Odgovor je uvek 200 OK da se ne bi otkrivalo postojanje emaila.
+        passwordResetService.initiatePasswordReset(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        // Koristimo try-catch da bismo uhvatili greške iz servisnog sloja
+        // i pretvorili ih u smislene HTTP odgovore.
+        try {
+            passwordResetService.finalizePasswordReset(request.token(), request.newPassword());
+            return ResponseEntity.ok("Lozinka je uspešno resetovana.");
+        } catch (InvalidTokenException e) {
+            // Vraćamo poruku iz izuzetka klijentu.
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }
