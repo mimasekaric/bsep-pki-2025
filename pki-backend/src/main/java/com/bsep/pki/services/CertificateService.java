@@ -70,7 +70,7 @@ public class CertificateService {
                 subjectAndIssuer, subjectAndIssuer,
                 keyPair.getPublic(), keyPair.getPrivate(),
                 dto.getValidFrom(), dto.getValidTo(),
-                serialNumber, true, KeyUsage.keyCertSign | KeyUsage.cRLSign
+                serialNumber, true,  dto
         );
 
         String alias = serialNumber.toString();
@@ -125,7 +125,7 @@ public class CertificateService {
                 dto.getValidTo(),
                 serialNumber,
                 isCa,
-                keyUsage
+                dto
         );
 
         // 4. Čuvanje u keystore
@@ -446,73 +446,6 @@ public class CertificateService {
         }
     }*/
 
-    @Transactional
-    public Certificate issueCertificate2(CertificateIssueDTO dto) throws Exception {
-        // 1. Validacija ulaznih podataka
-        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
-        User subjectUser = userRepository.findById(dto.getSubjectUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Subject user not found with ID: " + dto.getSubjectUserId()));
-
-        // 2. Učitavanje podataka o izdavaocu (issuer)
-        Keystore keystore = issuerCertData.getKeystore();
-        String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
-        PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
-
-        // Učitavamo lanac sertifikata za izdavaoca
-        java.security.cert.Certificate[] issuerChain = keystoreService.getCertificateChain(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
-
-        // Proveravamo da li je lanac validan i preuzimamo sertifikat izdavaoca
-        // Sertifikat izdavaoca je PRVI u lancu koji se dobija za njegov alias.
-        if (issuerChain == null || issuerChain.length == 0) {
-            throw new Exception("Certificate chain for issuer " + issuerCertData.getAlias() + " could not be loaded or is empty.");
-        }
-        X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
-
-        // 3. Generisanje podataka za novi sertifikat (subject)
-        KeyPair subjectKeyPair = cryptoService.generateRSAKeyPair();
-        X500Name subjectName = buildX500NameFromDto(dto); // Pretpostavka je da ova metoda postoji i radi ispravno
-
-        // Ime izdavaoca za novi sertifikat je "subject" ime iz sertifikata izdavaoca
-        X500Name issuerName = new X500Name(issuerCertX509.getSubjectX500Principal().getName());
-        BigInteger serialNumber = new BigInteger(128, new SecureRandom());
-
-        // Određivanje da li je novi sertifikat CA sertifikat na osnovu uloge korisnika
-        boolean isCa = subjectUser.getRole() == UserRole.ADMIN || subjectUser.getRole() == UserRole.CA_USER;
-        int keyUsage = isCa
-                ? KeyUsage.keyCertSign | KeyUsage.cRLSign
-                : KeyUsage.digitalSignature | KeyUsage.keyEncipherment;
-
-        // 4. Kreiranje novog sertifikata
-        X509Certificate newCert = certificateFactory.createCertificate(
-                subjectName,
-                issuerName,
-                subjectKeyPair.getPublic(),
-                issuerPrivateKey,
-                dto.getValidFrom(),
-                dto.getValidTo(),
-                serialNumber,
-                isCa,
-                keyUsage
-        );
-
-        // 5. Čuvanje novog sertifikata i ključa u keystore
-        String alias = serialNumber.toString();
-
-        // Kreiranje novog lanca sertifikata:
-        // Prvi element je novi sertifikat, a ostatak je lanac izdavaoca.
-        java.security.cert.Certificate[] newChain = new java.security.cert.Certificate[issuerChain.length + 1];
-        newChain[0] = newCert; // ISPRAVKA: Novi sertifikat ide na prvo mesto.
-        System.arraycopy(issuerChain, 0, newChain, 1, issuerChain.length); // Ostatak lanca se kopira iza njega.
-
-        // Učitavanje i ažuriranje keystore-a
-        var ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
-        ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
-        keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
-
-        // 6. Čuvanje podataka o novom sertifikatu u bazu
-        CertificateType type = isCa ? CertificateType.INTERMEDIATE : CertificateType.END_ENTITY;
-        return saveCertificateEntity(newCert, subjectUser, keystore, type, issuerCertData.getSerialNumber());
-    }
 
     private Certificate validateIssuer(String issuerSerial) {
         Certificate issuer = certificateRepository.findBySerialNumber(issuerSerial)
