@@ -18,7 +18,9 @@ public class PasswordResetTokenService {
     }
 
     public PasswordResetToken createPasswordResetToken(User user) {
-        tokenRepository.findByUser(user).ifPresent(tokenRepository::delete);
+        tokenRepository.findByUser(user).ifPresent(existingToken -> {
+            tokenRepository.delete(existingToken);
+        });
 
         PasswordResetToken newToken = new PasswordResetToken(user);
         return tokenRepository.save(newToken);
