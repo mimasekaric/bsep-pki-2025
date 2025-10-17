@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 export interface LoginRequest {
   email: string;
@@ -19,6 +20,7 @@ export interface RegisterRequest {
 export interface AuthResponse {
   accessToken: string;
   email: string;
+  user: string;
 }
 
 export interface User {
@@ -37,7 +39,7 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private router: Router) {
     this.loadUserFromStorage();
   }
 
@@ -45,7 +47,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials)
       .pipe(
         tap(response => {
-          this.setToken(response.accessToken); // Promijeni sa response.token na response.accessToken
+          this.setToken(response.accessToken);
           this.setCurrentUser(response.email);
         })
       );
@@ -64,7 +66,7 @@ export class AuthService {
   }
 
 
-  private setCurrentUser(email: string): void {
+  public setCurrentUser(email: string): void {
     try {
       const user = this.decodeJWTToken(email);
       this.currentUserSubject.next(user);
@@ -145,6 +147,8 @@ export class AuthService {
     localStorage.removeItem('jwt_token');
     localStorage.removeItem('currentUser');
     this.currentUserSubject.next(null);
+     this.router.navigate(['/login']);
+    
   }
 
   getToken(): string | null {
