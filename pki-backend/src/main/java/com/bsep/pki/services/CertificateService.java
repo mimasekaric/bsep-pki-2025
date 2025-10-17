@@ -44,6 +44,7 @@ public class CertificateService {
     private final CryptoService cryptoService;
     private final KeystoreService keystoreService;
     private final CertificateFactory certificateFactory;
+    private final CrlService crlService;
 
     @Transactional
     public Certificate issueRootCertificate(UUID adminId, CertificateIssueDTO dto) throws Exception {
@@ -589,4 +590,45 @@ public class CertificateService {
             throw e;
         }
     }
+
+    @Transactional
+    public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) {
+        Certificate certToRevoke = certificateRepository.findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Certificate not found"));
+
+        if (certToRevoke.isRevoked()) {
+            throw new CertificateValidationException("Certificate is already revoked.");
+        }
+
+        User requestingUser = userRepository.findById(requestingUserId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Provera permisija (admin može sve, ostali samo svoje)
+        if (requestingUser.getRole() != UserRole.ADMIN && !certToRevoke.getOwner().getId().equals(requestingUserId)) {
+            throw new SecurityException("You do not have permission to revoke this certificate.");
+        }
+
+        // Pokreni proces povlačenja
+        performRevocation(certToRevoke, reason);
+    }
+
+    private void performRevocation(Certificate certificate, String reason) {
+        if (certificate.isRevoked()) return;
+
+        certificate.setRevoked(true);
+        certificate.setRevocationReason(reason);
+        certificate.setRevocationDate(LocalDateTime.now());
+        certificateRepository.save(certificate);
+
+
+        if (certificate.getType() == CertificateType.ROOT || certificate.getType() == CertificateType.INTERMEDIATE) {
+            List<Certificate> issuedCerts = certificateRepository.findByIssuerSerialNumber(certificate.getSerialNumber());
+            for (Certificate cert : issuedCerts) {
+                performRevocation(cert, "cACompromise"); // Standardni X.509 razlog
+            }
+        }
+
+        // TODO: Ovde će doći poziv za CrlService u sledećem koraku
+        // crlService.regenerateCrl(certificate.getIssuerSerialNumber());
+    }
+
 }
