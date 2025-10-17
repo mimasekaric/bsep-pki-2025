@@ -8,6 +8,8 @@ import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.*;
 import com.bsep.pki.exceptions.CertificateValidationException;
 import com.bsep.pki.exceptions.ResourceNotFoundException;
+import com.bsep.pki.models.Certificate;
+import com.bsep.pki.repositories.CSRRepository;
 import com.bsep.pki.repositories.CertificateRepository;
 import com.bsep.pki.repositories.KeystoreRepository;
 import com.bsep.pki.repositories.UserRepository;
@@ -18,18 +20,19 @@ import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.*;
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
 import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
+import java.security.*;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +47,8 @@ public class CertificateService {
     private final CryptoService cryptoService;
     private final KeystoreService keystoreService;
     private final CertificateFactory certificateFactory;
+    private final CSRRepository csrRepository;
+    private final CSRService csrService;
 
     @Transactional
     public Certificate issueRootCertificate(UUID adminId, CertificateIssueDTO dto) throws Exception {
@@ -656,4 +661,91 @@ public class CertificateService {
             throw e;
         }
     }
+
+
+    @Transactional
+    public CertificateDetailsDTO issueCertificateFromCsr(Long csrId, String issuerSerialNumber, ZonedDateTime validFrom, ZonedDateTime validTo) throws Exception {
+        // 1. Učitavanje podataka
+        CSR csr = csrRepository.findById(csrId)
+                .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
+
+        Certificate issuerCertData = validateIssuer(issuerSerialNumber);
+        Keystore keystore = issuerCertData.getKeystore();
+        String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
+        PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
+        java.security.cert.Certificate[] issuerChain = keystoreService.getCertificateChain(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
+        X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
+
+        // 2. Parsiranje i validacija CSR-a
+        PKCS10CertificationRequest parsedCsr = csrService.parseCsr(csr.getPemContent());
+        csrService.validateCsr(parsedCsr); // Validacija potpisa i ključa
+
+        // 3. Provera validnosti datuma
+        if (validFrom.isBefore(issuerCertX509.getNotBefore().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime()) ||
+                validTo.isAfter(issuerCertX509.getNotAfter().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime())) {
+            throw new CertificateValidationException("Requested validity period is outside the issuer's validity period.");
+        }
+
+        // 4. Ekstrakcija podataka iz CSR-a
+        JcaPKCS10CertificationRequest jcaCsr = new JcaPKCS10CertificationRequest(parsedCsr);
+        PublicKey subjectPublicKey = jcaCsr.getPublicKey();
+        X500Name subjectName = parsedCsr.getSubject();
+        X500Name issuerName = X500Name.getInstance(issuerCertX509.getSubjectX500Principal().getEncoded());
+
+        // 5. Hardkodovanje ekstenzija (primer)
+        JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
+        Extensions extensions = new Extensions(new Extension[] {
+                // Subject Alternative Name (SAN) - primer sa DNS i IP adresom
+                new Extension(Extension.subjectAlternativeName, false, new GeneralNames(new GeneralName[] {
+                        new GeneralName(GeneralName.dNSName, "example.com"),
+                        new GeneralName(GeneralName.iPAddress, "192.168.1.1")
+                }).getEncoded()),
+                // Authority Key Identifier (AKI)
+                new Extension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCertX509).getEncoded()),
+                // Subject Key Identifier (SKI)
+                new Extension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(subjectPublicKey).getEncoded())
+        });
+
+        // 6. Kreiranje sertifikata
+        X509Certificate newCert = certificateFactory.createCertificate2(
+                subjectName,
+                issuerName,
+                subjectPublicKey, // Javni ključ iz CSR-a
+                issuerPrivateKey, // Privatni ključ izdavaoca
+                validFrom,
+                validTo,
+                new BigInteger(128, new SecureRandom()), // Novi serijski broj
+                false, // End-Entity sertifikat NIJE CA
+                KeyUsage.digitalSignature | KeyUsage.keyEncipherment, // Tipičan KeyUsage za EE
+                extensions // Prosleđujemo hardkodovane ekstenzije
+        );
+
+        // 7. Čuvanje u keystore - KAO TRUSTED CERTIFICATE (BEZ PRIVATNOG KLJUČA)
+        String alias = newCert.getSerialNumber().toString();
+        KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
+
+        // Koristimo setCertificateEntry jer NE čuvamo privatni ključ subjekta
+        ks.setCertificateEntry(alias, newCert);
+
+        // Ipak, da bi lanac bio kompletan, moramo dodati i lanac izdavaoca kao trusted entry
+        for (int i = 0; i < issuerChain.length; i++) {
+            X509Certificate certInChain = (X509Certificate) issuerChain[i];
+            ks.setCertificateEntry(certInChain.getSerialNumber().toString(), certInChain);
+        }
+
+        keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+
+        // 8. Čuvanje u bazu i ažuriranje statusa CSR-a
+        Certificate certEntity = saveCertificateEntity(newCert, csr.getOwner(), keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
+
+        csr.setStatus(CSR.CsrStatus.APPROVED);
+        csrRepository.save(csr);
+
+        return new CertificateDetailsDTO(certEntity);
+    }
+
+    // Takođe, ne zaboravite da popunite else blok u originalnoj issueCertificate metodi
+    // ako i dalje želite da je koristite za EE sertifikate gde vi generišete ključeve.
 }
+
+
