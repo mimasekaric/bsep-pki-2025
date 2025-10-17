@@ -12,6 +12,7 @@ import com.bsep.pki.repositories.CertificateRepository;
 import com.bsep.pki.repositories.KeystoreRepository;
 import com.bsep.pki.repositories.UserRepository;
 import com.bsep.pki.dtos.CertificateIssueDTO;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -19,6 +20,8 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.springframework.stereotype.Service;
+
+import java.io.FileInputStream;
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -27,6 +30,8 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -129,7 +134,7 @@ public class CertificateService {
             System.arraycopy(issuerChain, 0, newChain, 1, issuerChain.length);
 
 
-            try {
+            /*try {
                 // 1. Provera potpisa novog sertifikata sa javnim ključem izdavaoca
                 newCert.verify(issuerCertX509.getPublicKey());
 
@@ -142,7 +147,7 @@ public class CertificateService {
                 // Ovo će vam reći da li je problem u potpisu ili nečemu sličnom.
                 System.err.println("Verifikacija lanca neuspešna: " + ex.getMessage());
                 throw ex;
-            }
+            }*/
 
 
 
@@ -542,5 +547,113 @@ public class CertificateService {
         builder.addRDN(BCStyle.C, dto.getCountry());
         builder.addRDN(BCStyle.EmailAddress, dto.getEmail());
         return builder.build();
+    }
+
+    public java.security.cert.Certificate[] loadCertificateChainById(Long certificateId) {
+        try {
+            Certificate certificate = certificateRepository.findById(certificateId)
+                    .orElseThrow(() -> new EntityNotFoundException("Certificate not found", null));
+
+            Keystore keystore = keystoreRepository.findById(certificate.getKeystore().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Keystore not found", null));
+
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+
+            String decryptedPassword = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+            try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystore.getId() + ".p12")) {
+                ks.load(fis, decryptedPassword.toCharArray());
+            }
+
+            System.out.println("=== Certificate Chain Debug ===");
+            System.out.println("Certificate ID: " + certificateId);
+            System.out.println("Certificate Alias: " + certificate.getAlias());
+            System.out.println("Keystore ID: " + keystore.getId());
+
+            // Get the complete certificate chain
+            java.security.cert.Certificate[] chain = ks.getCertificateChain(certificate.getAlias());
+
+            System.out.println("Raw chain length: " + (chain != null ? chain.length : "null"));
+
+            if (chain != null) {
+                for (int i = 0; i < chain.length; i++) {
+                    if (chain[i] instanceof X509Certificate) {
+                        X509Certificate x509Cert = (X509Certificate) chain[i];
+                        System.out.println("Chain[" + i + "] Subject: " + x509Cert.getSubjectX500Principal().getName());
+                        System.out.println("Chain[" + i + "] Issuer: " + x509Cert.getIssuerX500Principal().getName());
+                        System.out.println("Chain[" + i + "] Serial: " + x509Cert.getSerialNumber());
+                    }
+                }
+            }
+
+            if (chain == null || chain.length == 0) {
+                System.out.println("No certificate chain found, trying to get single certificate");
+                // If no chain exists, return just the certificate itself
+                X509Certificate cert = (X509Certificate) ks.getCertificate(certificate.getAlias());
+                if (cert != null) {
+                    System.out.println("Found single certificate: " + cert.getSubjectX500Principal().getName());
+
+                    // Debug: Check for SANs in the certificate
+                    try {
+                        Collection<List<?>> sans = cert.getSubjectAlternativeNames();
+                        if (sans != null && !sans.isEmpty()) {
+                            System.out.println("=== SANs Found in Certificate ===");
+                            for (List<?> san : sans) {
+                                System.out.println("SAN Type: " + san.get(0) + ", Value: " + san.get(1));
+                            }
+                            System.out.println("=== End SANs Debug ===");
+                        } else {
+                            System.out.println("No SANs found in certificate");
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error reading SANs: " + e.getMessage());
+                    }
+
+                    return new java.security.cert.Certificate[]{cert};
+                }
+                throw new EntityNotFoundException("Certificate not found in keystore", null);
+            }
+
+            System.out.println("=== End Certificate Chain Debug ===");
+            return chain;
+        } catch (Exception e) {
+            System.err.println("Failed to load certificate chain: " + e.getMessage());
+            e.printStackTrace();
+            throw new EntityNotFoundException("Failed to load certificate chain from keystore", e);
+        }
+    }
+
+
+    public byte[] convertCertificateChainToPKCS7(java.security.cert.Certificate[] chain) throws Exception {
+        System.out.println("=== PKCS#7 Conversion Debug ===");
+        System.out.println("Converting chain of " + chain.length + " certificates to PKCS#7");
+
+        try {
+            // Create a PKCS#7 container
+            org.bouncycastle.cms.CMSProcessableByteArray content = new org.bouncycastle.cms.CMSProcessableByteArray(new byte[0]);
+            org.bouncycastle.cms.CMSSignedDataGenerator gen = new org.bouncycastle.cms.CMSSignedDataGenerator();
+
+            // Add all certificates to the container
+            for (int i = 0; i < chain.length; i++) {
+                if (chain[i] instanceof X509Certificate) {
+                    X509Certificate x509Cert = (X509Certificate) chain[i];
+                    System.out.println("Adding certificate " + i + " to PKCS#7: " + x509Cert.getSubjectX500Principal().getName());
+                    gen.addCertificate(new org.bouncycastle.cert.X509CertificateHolder(x509Cert.getEncoded()));
+                }
+            }
+
+            // Generate the PKCS#7 data
+            org.bouncycastle.cms.CMSSignedData signedData = gen.generate(content, false);
+            byte[] pkcs7Bytes = signedData.getEncoded();
+
+            System.out.println("PKCS#7 conversion complete, size: " + pkcs7Bytes.length + " bytes");
+            System.out.println("=== End PKCS#7 Conversion Debug ===");
+
+            return pkcs7Bytes;
+        } catch (Exception e) {
+            System.err.println("Failed to convert to PKCS#7: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 }

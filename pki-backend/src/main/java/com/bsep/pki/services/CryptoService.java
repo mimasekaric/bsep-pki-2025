@@ -50,7 +50,7 @@ public class CryptoService {
         byte[] decodedKey = Base64.getDecoder().decode(masterKeyString);
         return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
     }*/
-    private SecretKey getMasterKey() {
+    public SecretKey getMasterKey() {
         if (masterKeyString.length() != 32) {
             // Logujte upozorenje ili bacite Exception ako ključ nije 32 znaka
             throw new IllegalArgumentException("Master Key must be 32 characters long for AES-256.");

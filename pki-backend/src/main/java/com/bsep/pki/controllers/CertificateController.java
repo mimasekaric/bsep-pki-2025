@@ -6,7 +6,9 @@ import com.bsep.pki.services.CertificateService;
 import com.bsep.pki.dtos.CertificateDetailsDTO;
 import com.bsep.pki.dtos.CertificateIssueDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,6 +41,29 @@ public class CertificateController {
             return new ResponseEntity<>(result, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+    }
+    @GetMapping("/download/{certificateId}")
+    public ResponseEntity<byte[]> downloadCertificate(@PathVariable Long certificateId) {
+        try {
+            // Load the complete certificate chain
+            java.security.cert.Certificate[] certificateChain = certificateService.loadCertificateChainById(certificateId);
+
+            if (certificateChain == null || certificateChain.length == 0) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            // Convert to PKCS#7 format which preserves hierarchy better
+            byte[] pkcs7Bytes = certificateService.convertCertificateChainToPKCS7(certificateChain);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"certificatechain" + certificateId + ".p7b\"")
+                    .contentType(MediaType.valueOf("application/x-pkcs7-certificates"))
+                    .body(pkcs7Bytes);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
 }
