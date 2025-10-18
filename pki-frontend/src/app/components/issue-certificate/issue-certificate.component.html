@@ -33,6 +33,7 @@
         <!-- Unapređeni izbor izdavaoca - prikazuje se samo ako NIJE root -->
         <div class="form-group" *ngIf="!isRootCertificate">
           <label for="issuer">Izdavač (Issuer) *</label>
+          <!-- U issue-certificate.component.html -->
           <select 
             id="issuer" 
             formControlName="issuerSerialNumber" 
@@ -40,8 +41,9 @@
             [class.error]="hasError('issuerSerialNumber')"
             (change)="onIssuerChange($event)">
             <option [ngValue]="null" disabled>Izaberite sertifikat izdavaoca...</option>
-            <!-- Lista se dinamički puni iz TypeScript komponente -->
-            <option *ngFor="let issuer of availableIssuers" [ngValue]="issuer.serialNumber">
+            
+            <!-- === IZMENA OVDE: [ngValue] postaje [value] === -->
+            <option *ngFor="let issuer of availableIssuers" [value]="issuer.serialNumber">
               CN: {{ issuer.commonName }} (važi do: {{ issuer.validTo | date:'dd.MM.yyyy' }})
             </option>
           </select>

@@ -21,6 +21,8 @@ export class IssueCertificateComponent implements OnInit {
   // Promenljive za dinamičko ograničavanje datuma
   issuerValidFrom: string = '';
   issuerValidTo: string = '';
+  issuerValidFromDate: Date | null = null;
+  issuerValidToDate: Date | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -77,11 +79,6 @@ export class IssueCertificateComponent implements OnInit {
     });
   }
 
-  // ===== NOVA, POPUNJENA METODA =====
-  /**
-   * Poziva CertificateService, dobavlja listu izdavaoca
-   * i smešta je u lokalnu promenljivu `availableIssuers`.
-   */
   loadIssuers(): void {
     this.isLoading = true; // Opciono: prikaži spinner dok se učitava
     this.certificateService.getAvailableIssuers().subscribe({
@@ -97,19 +94,47 @@ export class IssueCertificateComponent implements OnInit {
     });
   }
   
-  // Metoda onIssuerChange sada radi sa realnim podacima
-  onIssuerChange(event: any): void {
+
+  // U issue-certificate.component.ts
+
+onIssuerChange(event: any): void {
     const selectedSerial = event.target.value;
-    const selectedIssuer = this.availableIssuers.find(i => i.serialNumber === selectedSerial);
+    const selectedIssuer = this.availableIssuers.find(i => i.serialNumber == selectedSerial);
 
     if (selectedIssuer) {
-      this.issuerValidFrom = this.formatDateForInput(new Date(selectedIssuer.validFrom));
-      this.issuerValidTo = this.formatDateForInput(new Date(selectedIssuer.validTo));
+      console.log('USPEŠNO PRONAĐEN IZDAVALAC:', selectedIssuer);
+      
+      // Kreiramo Date objekte
+      const validFrom = new Date(selectedIssuer.validFrom);
+      const validTo = new Date(selectedIssuer.validTo);
+
+      // === NOVI DEO: Popunjavamo OBE verzije promenljivih ===
+      
+      // 1. Verzija za [min]/[max] atribute (formatirani string)
+      this.issuerValidFrom = this.formatDateForInput(validFrom);
+      this.issuerValidTo = this.formatDateForInput(validTo);
+      
+      // 2. Verzija za prikaz u <small> tagu (Date objekat)
+      this.issuerValidFromDate = validFrom;
+      this.issuerValidToDate = validTo;
+      // =======================================================
       
       this.certificateForm.get('validFrom')?.reset();
       this.certificateForm.get('validTo')?.reset();
+
+    } else {
+      console.error('Nije pronađen izdavalac za izabrani serijski broj!');
+      // Očisti vrednosti ako korisnik izabere pa obriše
+      this.issuerValidFrom = '';
+      this.issuerValidTo = '';
+      this.issuerValidFromDate = null;
+      this.issuerValidToDate = null;
     }
-  }
+}
+
+// U issue-certificate.component.ts
+
+
 
   // Ostale metode (`formatDateForInput`, `toggleCertificateType`, `sanControls`, `addSan`, `removeSan`, `onSubmit`, `hasError`, `getErrorMessage`)
   // ostaju ISTE kao u prethodnom odgovoru.
@@ -122,18 +147,20 @@ export class IssueCertificateComponent implements OnInit {
   }
 
   toggleCertificateType(): void {
-    // ... ista logika
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
     if (this.isRootCertificate) {
       issuerControl?.clearValidators();
       issuerControl?.setValue(null);
+      // Resetuj SVE promenljive za datum
       this.issuerValidFrom = '';
       this.issuerValidTo = '';
+      this.issuerValidFromDate = null;
+      this.issuerValidToDate = null;
     } else {
       issuerControl?.setValidators([Validators.required]);
     }
     issuerControl?.updateValueAndValidity();
-  }
+}
 
   get sanControls() {
     return this.certificateForm.get('subjectAlternativeNames') as FormArray;
