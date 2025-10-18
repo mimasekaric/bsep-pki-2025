@@ -56,7 +56,10 @@ public class UserService implements IUserService, UserDetailsService {
         return userMapper.toDto(savedUser);
     }
 
-
+public  Optional<User> getUserByUsername(String username) {
+        Optional<User> user = userRepository.findByEmail(username);
+        return user;
+}
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
