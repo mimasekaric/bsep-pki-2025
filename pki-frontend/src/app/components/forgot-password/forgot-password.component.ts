@@ -13,8 +13,6 @@ export class ForgotPasswordComponent {
   forgotPasswordForm: FormGroup;
   isLoading = false;
   errorMessage = '';
-  successMessage = '';
-  showNewPasswordForm = false;
 
   constructor(
     private fb: FormBuilder,
@@ -22,20 +20,8 @@ export class ForgotPasswordComponent {
     private router: Router
   ) {
     this.forgotPasswordForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      newPassword: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', [Validators.required]]
-    }, { validators: this.passwordMatchValidator });
-  }
-
-  passwordMatchValidator(form: FormGroup) {
-    const newPassword = form.get('newPassword');
-    const confirmPassword = form.get('confirmPassword');
-    
-    if (newPassword && confirmPassword && newPassword.value !== confirmPassword.value) {
-      return { passwordMismatch: true };
-    }
-    return null;
+      email: ['', [Validators.required, Validators.email]]
+    });
   }
 
   onSubmitEmail() {
@@ -43,18 +29,47 @@ export class ForgotPasswordComponent {
       this.isLoading = true;
       this.errorMessage = '';
       
+      const email = this.forgotPasswordForm.get('email')?.value;
+      
+      // Poziv ka backend servisu za slanje reset email-a
+      // this.authService.sendResetPasswordEmail(email).subscribe({
+      //   next: (response) => {
+      //     this.isLoading = false;
+      //     Swal.fire({
+      //       icon: 'success',
+      //       title: 'Email poslat!',
+      //       text: 'Proverite vaš email inbox. Poslali smo vam link za resetovanje lozinke.',
+      //       confirmButtonColor: '#8b45ff',
+      //       confirmButtonText: 'U redu'
+      //     });
+      //   },
+      //   error: (error) => {
+      //     this.isLoading = false;
+      //     Swal.fire({
+      //       icon: 'error',
+      //       title: 'Greška!',
+      //       text: error.error?.message || 'Greška pri slanju email-a',
+      //       confirmButtonColor: '#8b45ff'
+      //     });
+      //   }
+      // });
+
       // Simulacija slanja email-a za reset lozinke
+      // U realnoj aplikaciji, backend će poslati email sa linkom:
+      // http://localhost:4200/reset-password?token=JWT_TOKEN
       setTimeout(() => {
         this.isLoading = false;
         Swal.fire({
-          icon: 'info',
+          icon: 'success',
           title: 'Email poslat!',
-          text: 'Instrukcije za resetovanje lozinke su poslate na vašu email adresu.',
+          text: 'Proverite vaš email inbox. Poslali smo vam link za resetovanje lozinke.',
           confirmButtonColor: '#8b45ff',
           confirmButtonText: 'U redu'
-        }).then(() => {
-          this.showNewPasswordForm = true;
         });
+        
+        // Za testiranje: simuliraj token i automatski preusmeri
+        // Ukloni ovo u produkciji!
+        console.log('Test link: http://localhost:4200/reset-password?token=test-jwt-token-12345');
       }, 1500);
     }
   }

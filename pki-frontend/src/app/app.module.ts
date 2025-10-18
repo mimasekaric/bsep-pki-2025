@@ -7,6 +7,7 @@ import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
+import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { HttpClientModule } from '@angular/common/http';
 import { AuthGuard } from './auth.guard';
 
@@ -16,7 +17,8 @@ import { AuthGuard } from './auth.guard';
     LoginComponent,
     RegisterComponent,
     EmailVerificationComponent,
-    ForgotPasswordComponent
+    ForgotPasswordComponent,
+    ResetPasswordComponent
   ],
   imports: [
     BrowserModule,
