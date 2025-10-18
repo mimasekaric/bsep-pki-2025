@@ -7,6 +7,7 @@ import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -144,6 +145,59 @@ public class CertificateFactory {
         DistributionPointName dpn = new DistributionPointName(new GeneralNames(gn));
         DistributionPoint distPoint = new DistributionPoint(dpn, null, null);
         certBuilder.addExtension(Extension.cRLDistributionPoints, false, new CRLDistPoint(new DistributionPoint[]{distPoint}));
+    }
+
+    public X509Certificate createCertificateFromCsrData(
+            X500Name subject, X500Name issuer,
+            PublicKey subjectPublicKey, PrivateKey issuerPrivateKey,
+            ZonedDateTime validFrom, ZonedDateTime validTo,
+            BigInteger serialNumber,
+            X509Certificate issuerCert, // Izdavalac
+            Extensions requestedExtensions // Ekstenzije pročitane iz CSR-a
+    ) throws Exception {
+
+        JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
+                issuer, serialNumber,
+                Date.from(validFrom.toInstant()), Date.from(validTo.toInstant()),
+                subject, subjectPublicKey);
+
+        // === VALIDACIJA I KOPIRANJE EKSTENZIJA IZ CSR-a ===
+        if (requestedExtensions != null) {
+            ASN1ObjectIdentifier[] oids = requestedExtensions.getExtensionOIDs();
+            for (ASN1ObjectIdentifier oid : oids) {
+                Extension ext = requestedExtensions.getExtension(oid);
+
+                // === SIGURNOSNA PROVERA: Odbaci ako korisnik traži CA prava ===
+                if (oid.equals(Extension.basicConstraints)) {
+                    BasicConstraints bc = BasicConstraints.getInstance(ext.getParsedValue());
+                    if (bc.isCA()) {
+                        throw new SecurityException("CSR validation failed: End-Entity cannot request to be a CA.");
+                    }
+                }
+                if (oid.equals(Extension.keyUsage)) {
+                    KeyUsage ku = KeyUsage.getInstance(ext.getParsedValue());
+                    if (ku.hasUsages(KeyUsage.keyCertSign) || ku.hasUsages(KeyUsage.cRLSign)) {
+                        throw new SecurityException("CSR validation failed: End-Entity cannot request keyCertSign or cRLSign.");
+                    }
+                }
+
+                // Ako je provera prošla, kopiraj ekstenziju
+                certBuilder.addExtension(ext);
+            }
+        } else {
+            // Ako CSR nema ekstenzije, dodaj default za End-Entity
+            certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false));
+            certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+        }
+
+        // === DODAVANJE OBAVEZNIH EKSTENZIJA KOJE POSTAVLJA CA ===
+        JcaX509ExtensionUtils extUtils = new JcaX509ExtensionUtils();
+        certBuilder.addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(issuerCert));
+        certBuilder.addExtension(Extension.subjectKeyIdentifier, false, extUtils.createSubjectKeyIdentifier(subjectPublicKey));
+        addCrlDistributionPoint(certBuilder, issuerCert.getSerialNumber().toString());
+
+        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256WithRSAEncryption").build(issuerPrivateKey);
+        return new JcaX509CertificateConverter().setProvider("BC").getCertificate(certBuilder.build(contentSigner));
     }
 
 
