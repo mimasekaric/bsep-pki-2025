@@ -13,6 +13,9 @@ import { TokensComponent } from './components/tokens/tokens.component';
 import { AuthInterceptor } from '../app/inceptors/auth.inceptor';
 import { AuthService } from './services/auth.service';
 import {HTTP_INTERCEPTORS } from '@angular/common/http';
+import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
+import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { NavbarComponent } from './layout/navbar/navbar.component';
 
 @NgModule({
   declarations: [
@@ -21,7 +24,10 @@ import {HTTP_INTERCEPTORS } from '@angular/common/http';
     RegisterComponent,
     EmailVerificationComponent,
     IssueCertificateComponent,
-    TokensComponent
+    TokensComponent,
+    CsrUploadComponent,
+    CsrListComponent,
+    NavbarComponent
   ],
   imports: [
     BrowserModule,
