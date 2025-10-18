@@ -25,7 +25,8 @@ public class CertificateController {
     public ResponseEntity<?> issueRoot(@RequestBody CertificateIssueDTO dto) {
         try {
             // TODO: U realnoj aplikaciji, ID admina bi se dobio iz Spring Security Context-a
-            String uuidString = "b667ae38-86aa-4004-b3d5-ddb3fbe50667";
+         //   String uuidString = "b667ae38-86aa-4004-b3d5-ddb3fbe50667";
+            String uuidString = "723a88f0-2bf8-41fd-aaa1-7c3f95fb1bcb";
             UUID adminId = UUID.fromString(uuidString);
             Certificate cert = certificateService.issueRootCertificate(adminId, dto);
             return new ResponseEntity<>(new CertificateDetailsDTO(cert), HttpStatus.CREATED);
