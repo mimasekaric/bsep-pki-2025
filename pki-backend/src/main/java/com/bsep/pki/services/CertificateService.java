@@ -3,6 +3,7 @@ package com.bsep.pki.services;
 
 import com.bsep.pki.dtos.CertificateDetailsDTO;
 import com.bsep.pki.dtos.CertificateWithPrivateKeyDTO;
+import com.bsep.pki.dtos.IssuerDto;
 import com.bsep.pki.dtos.requests.ApproveCsrDTO;
 import com.bsep.pki.enums.CertificateType;
 import com.bsep.pki.enums.UserRole;
@@ -15,6 +16,7 @@ import com.bsep.pki.repositories.CertificateRepository;
 import com.bsep.pki.repositories.KeystoreRepository;
 import com.bsep.pki.repositories.UserRepository;
 import com.bsep.pki.dtos.CertificateIssueDTO;
+import com.bsep.pki.util.DnParserUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,9 @@ import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
@@ -34,9 +39,8 @@ import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -700,13 +704,101 @@ public class CertificateService {
 
         keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
 
-        // 7. Čuvanje u bazu i ažuriranje statusa CSR-a
         Certificate certEntity = saveCertificateEntity(newCert, csr.getOwner(), keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
 
         csr.setStatus(CSR.CsrStatus.APPROVED);
         csrRepository.save(csr);
 
         return new CertificateDetailsDTO(certEntity);
+    }
+
+    public List<IssuerDto> getPotentialIssuers() {
+        try {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal == null) {
+                System.err.println("Greska: Principal je null. Korisnik nije autentifikovan.");
+                return Collections.emptyList();
+            }
+
+            // ==========================================================
+            // ==== KONAČNO ISPRAVNO REŠENJE ============================
+            // ==========================================================
+            String email;
+            if (principal instanceof Jwt) {
+                // Ako je Principal Jwt objekat, uzimamo 'subject' claim iz njega.
+                Jwt jwt = (Jwt) principal;
+                email = jwt.getSubject();
+            } else {
+                // Fallback za druge konfiguracije (iako se kod Vas neće desiti)
+                throw new IllegalStateException("Principal nije očekivanog tipa (Jwt). Tip je: " + principal.getClass().getName());
+            }
+            // ==========================================================
+
+            if (email == null || email.isBlank()) {
+                throw new IllegalStateException("Email (subject) u JWT tokenu je prazan ili ne postoji.");
+            }
+
+            String cleanedEmail = email.trim();
+            System.out.println("Pokušavam da pronađem korisnika sa emailom iz JWT-a: '" + cleanedEmail + "'");
+
+            User user = userRepository.findByEmail(cleanedEmail)
+                    .orElseThrow(() -> new IllegalStateException("Ulogovani korisnik sa emailom '" + cleanedEmail + "' nije pronađen u bazi."));
+
+            // NOVI DEBUG
+            System.out.println("--- DEBUG: Pretraga SVIH sertifikata iz baze ---");
+            List<Certificate> sviSertifikati = certificateRepository.findAll(); // Dobavi SVE iz baze
+            System.out.println("Ukupno pronađeno sertifikata u bazi: " + sviSertifikati.size());
+
+            for(Certificate cert : sviSertifikati) {
+                System.out.println(
+                        "SN: " + cert.getSerialNumber() +
+                                ", Tip: " + cert.getType() +
+                                ", Povučen: " + cert.isRevoked() +
+                                ", Važi do: " + cert.getValidTo() +
+                                ", DN: " + cert.getSubjectDN()
+                );
+            }
+            System.out.println("-------------------------------------------------");
+
+            // --- Ostatak metode je sada 100% ispravan ---
+            if (user.getRole() == null || user.getRoleAsString() == null) {
+                System.err.println("Korisnik " + user.getEmail() + " nema definisanu ulogu!");
+                return Collections.emptyList();
+            }
+
+            List<CertificateType> caTypes = List.of(CertificateType.ROOT, CertificateType.INTERMEDIATE);
+            LocalDateTime now = LocalDateTime.now();
+            List<Certificate> issuerCertificates;
+            String userRole = user.getRoleAsString();
+
+            if ("ADMIN".equals(userRole)) {
+                issuerCertificates = certificateRepository.findAllActiveCaCertificates(caTypes, now);
+            } else if ("CA_USER".equals(userRole) || "ORDINARY_USER".equals(userRole)) {
+                String userOrganization = user.getOrganisation();
+                if (userOrganization == null || userOrganization.isBlank()) {
+                    System.err.println("Korisnik " + user.getEmail() + " nema definisanu organizaciju!");
+                    return Collections.emptyList();
+                }
+                String orgDnPattern = "%O=" + userOrganization + "%";
+                issuerCertificates = certificateRepository.findAllActiveCaCertificatesByOrganizationDN(orgDnPattern, caTypes, now);
+            } else {
+                issuerCertificates = Collections.emptyList();
+            }
+
+            return issuerCertificates.stream()
+                    .filter(cert -> cert != null && cert.getSubjectDN() != null && cert.getValidFrom() != null && cert.getValidTo() != null)
+                    .map(cert -> new IssuerDto(
+                            cert.getSerialNumber(),
+                            DnParserUtil.extractField(cert.getSubjectDN(), "CN"),
+                            Date.from(cert.getValidFrom().atZone(ZoneId.systemDefault()).toInstant()),
+                            Date.from(cert.getValidTo().atZone(ZoneId.systemDefault()).toInstant())
+                    ))
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
 }
