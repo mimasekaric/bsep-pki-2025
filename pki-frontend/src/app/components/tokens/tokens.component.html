@@ -1,0 +1,48 @@
+<div class="certificate-container">
+  <div class="certificate-card">
+    <div class="certificate-header">
+      <h2>Aktivne sesije</h2>
+      <p>Pregled svih uređaja i pregledača gde ste trenutno prijavljeni</p>
+    </div>
+
+    <div class="session-list">
+      <div *ngIf="displaySessions.length === 0" class="no-sessions-message">
+        <p>Nema aktivnih sesija za pregled.</p>
+      </div>
+
+
+      <div class="session-card" *ngFor="let session of displaySessions">
+        <div class="session-info">
+        
+          <h3>{{ session.displayDevice }}</h3>
+          <p class="session-location">
+            <i class="fas fa-map-marker-alt"></i> {{ session.displayLocation }}
+            — <i class="fas fa-clock"></i> {{ session.lastActive | date:'MMM d, y, h:mm a' }}
+          </p>
+
+          <p class="session-meta" *ngIf="session.current">
+            <span class="current-tag"><i class="fas fa-check-circle"></i> Ova sesija</span>
+          </p>
+        </div>
+
+        <button
+          class="revoke-button"
+          *ngIf="!session.current"
+          (click)="revokeToken(session.token)"
+        >
+          <i class="fas fa-times-circle"></i> Odjavi
+        </button>
+      </div>
+    </div>
+
+    <div class="logout-all">
+      <button
+        class="certificate-button"
+        *ngIf="displaySessions.length > 1"
+        (click)="logoutAll()"
+      >
+        <i class="fas fa-sign-out-alt"></i> Odjavi sve ostale sesije
+      </button>
+    </div>
+  </div>
+</div>

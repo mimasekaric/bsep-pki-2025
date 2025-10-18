@@ -12,6 +12,10 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { HttpClientModule } from '@angular/common/http';
 import { AuthGuard } from './auth.guard';
+import { TokensComponent } from './components/tokens/tokens.component';
+import { AuthInterceptor } from '../app/inceptors/auth.inceptor';
+import { AuthService } from './services/auth.service';
+import {HTTP_INTERCEPTORS } from '@angular/common/http';
 
 @NgModule({
   declarations: [
@@ -22,7 +26,8 @@ import { AuthGuard } from './auth.guard';
     EmailVerificationComponent,
     IssueCertificateComponent,
     ForgotPasswordComponent,
-    ResetPasswordComponent
+    ResetPasswordComponent,
+    TokensComponent
   ],
   imports: [
     BrowserModule,
@@ -31,7 +36,14 @@ import { AuthGuard } from './auth.guard';
     ReactiveFormsModule,
     FormsModule
   ],
-  providers: [],
+   providers: [
+    AuthService, // Pruži AuthService ako ga koristiš za logout
+    {
+      provide: HTTP_INTERCEPTORS, // Angular token za interceptore
+      useClass: AuthInterceptor,  // Tvoja klasa interceptora
+      multi: true                 // Omogućava dodavanje više interceptora
+    }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

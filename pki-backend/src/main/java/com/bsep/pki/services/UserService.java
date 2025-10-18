@@ -4,6 +4,7 @@ import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.events.OnRegistrationCompletedEvent;
+import com.bsep.pki.exceptions.ResourceNotFoundException;
 import com.bsep.pki.mappers.UserMapper;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
@@ -56,7 +57,10 @@ public class UserService implements IUserService, UserDetailsService {
         return userMapper.toDto(savedUser);
     }
 
-
+public  Optional<User> getUserByUsername(String username) {
+        Optional<User> user = userRepository.findByEmail(username);
+        return user;
+}
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
@@ -73,6 +77,11 @@ public class UserService implements IUserService, UserDetailsService {
                 true,
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
         );
+    }
+    @Override
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
 }

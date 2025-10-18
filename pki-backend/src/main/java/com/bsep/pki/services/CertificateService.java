@@ -3,11 +3,14 @@ package com.bsep.pki.services;
 
 import com.bsep.pki.dtos.CertificateDetailsDTO;
 import com.bsep.pki.dtos.CertificateWithPrivateKeyDTO;
+import com.bsep.pki.dtos.requests.ApproveCsrDTO;
 import com.bsep.pki.enums.CertificateType;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.*;
 import com.bsep.pki.exceptions.CertificateValidationException;
 import com.bsep.pki.exceptions.ResourceNotFoundException;
+import com.bsep.pki.models.Certificate;
+import com.bsep.pki.repositories.CSRRepository;
 import com.bsep.pki.repositories.CertificateRepository;
 import com.bsep.pki.repositories.KeystoreRepository;
 import com.bsep.pki.repositories.UserRepository;
@@ -18,18 +21,19 @@ import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.*;
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
 import java.math.BigInteger;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.SecureRandom;
+import java.security.*;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -44,6 +48,9 @@ public class CertificateService {
     private final CryptoService cryptoService;
     private final KeystoreService keystoreService;
     private final CertificateFactory certificateFactory;
+    private final CrlService crlService;
+    private final CSRRepository csrRepository;
+    private final CSRService csrService;
 
     @Transactional
     public Certificate issueRootCertificate(UUID adminId, CertificateIssueDTO dto) throws Exception {
@@ -161,21 +168,24 @@ public class CertificateService {
             // Vraćamo samo entitet (bez privatnog ključa)
             return new CertificateDetailsDTO(certEntity);
 
-        } /*else {
-            // SLUČAJ B: End-Entity sertifikat
-            ks.setCertificateEntry(alias, newCert);
-            System.out.println("Saving End-Entity certificate WITHOUT private key. Alias: " + alias);
+        } else {
+
+
+            java.security.cert.Certificate[] newChain = new java.security.cert.Certificate[issuerChain.length + 1];
+            newChain[0] = newCert;
+            System.arraycopy(issuerChain, 0, newChain, 1, issuerChain.length);
+
+
+            ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
 
             keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+
             Certificate certEntity = saveCertificateEntity(newCert, subjectUser, keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
 
-            // Pretvaranje privatnog ključa u PEM format (radi lakšeg preuzimanja)
-            String privateKeyPem = cryptoService.privateKeyToPem(subjectKeyPair.getPrivate());
 
-            // Vraćamo i sertifikat i privatni ključ
+            String privateKeyPem = cryptoService.privateKeyToPem(subjectKeyPair.getPrivate());
             return new CertificateWithPrivateKeyDTO(new CertificateDetailsDTO(certEntity), privateKeyPem);
-        }*/
-        return null; //TODO: END ENTITY CUVANJE??
+        }
 
     }
 
@@ -589,4 +599,116 @@ public class CertificateService {
             throw e;
         }
     }
+
+    @Transactional
+    public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) throws Exception {
+        Certificate certToRevoke = certificateRepository.findBySerialNumber(serialNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Certificate not found"));
+
+        if (certToRevoke.isRevoked()) {
+            throw new CertificateValidationException("Certificate is already revoked.");
+        }
+
+        User requestingUser = userRepository.findById(requestingUserId).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // Provera permisija (admin može sve, ostali samo svoje)
+        if (requestingUser.getRole() != UserRole.ADMIN && !certToRevoke.getOwner().getId().equals(requestingUserId)) {
+            throw new SecurityException("You do not have permission to revoke this certificate.");
+        }
+
+        // Pokreni proces povlačenja
+        performRevocation(certToRevoke, reason);
+    }
+
+    private void performRevocation(Certificate certificate, String reason) throws Exception {
+        if (certificate.isRevoked()) return;
+        if (reason == null) reason = "unspecified"; // fallback
+        certificate.setRevoked(true);
+        certificate.setRevocationReason(reason);
+        certificate.setRevocationDate(LocalDateTime.now());
+        certificateRepository.save(certificate);
+
+
+        if (certificate.getType() == CertificateType.ROOT || certificate.getType() == CertificateType.INTERMEDIATE) {
+            List<Certificate> issuedCerts = certificateRepository.findByIssuerSerialNumber(certificate.getSerialNumber());
+            for (Certificate cert : issuedCerts) {
+                performRevocation(cert, "cACompromise"); // Standardni X.509 razlog
+            }
+        }
+
+         crlService.regenerateCrl(certificate.getIssuerSerialNumber());
+    }
+
+
+
+    @Transactional
+    public CertificateDetailsDTO issueCertificateFromCsr(
+            Long csrId,
+            ApproveCsrDTO dto // <-- PRIMAMO DTO SA EKSTENZIJAMA
+    ) throws Exception {
+
+        // 1. Učitavanje podataka
+        CSR csr = csrRepository.findById(csrId)
+                .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
+
+        // DTO sada sadrži serijski broj izdavaoca
+        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
+        Keystore keystore = issuerCertData.getKeystore();
+        String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
+        PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
+        X509Certificate issuerCertX509 = (X509Certificate) keystoreService.getCertificateChain(
+                keystore.getId(), password.toCharArray(), issuerCertData.getAlias()
+        )[0];
+
+        // 2. Parsiranje i validacija CSR-a
+        PKCS10CertificationRequest parsedCsr = csrService.parseCsr(csr.getPemContent());
+        csrService.validateCsr(parsedCsr);
+
+        // 3. Provera validnosti datuma iz DTO
+        /*if (dto.getValidFrom().isBefore(issuerCertX509.getNotBefore().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime()) ||
+                dto.getValidTo().isAfter(issuerCertX509.getNotAfter().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime())) {
+            throw new CertificateValidationException("Requested validity period is outside the issuer's validity period.");
+        }*/
+
+        // 4. Ekstrakcija ključnih podataka iz CSR-a
+        JcaPKCS10CertificationRequest jcaCsr = new JcaPKCS10CertificationRequest(parsedCsr);
+        PublicKey subjectPublicKey = jcaCsr.getPublicKey();
+        X500Name subjectName = parsedCsr.getSubject(); // Subject ime se uzima iz CSR-a
+        X500Name issuerName = X500Name.getInstance(issuerCertX509.getSubjectX500Principal().getEncoded());
+
+        Extensions requestedExtensions = csrService.getExtensionsFromCsr(parsedCsr);
+
+        // 4. Kreiranje sertifikata
+        // Potrebna nam je nova metoda u fabrici
+        X509Certificate newCert = certificateFactory.createCertificateFromCsrData(
+                subjectName,
+                issuerName,
+                subjectPublicKey,
+                issuerPrivateKey,
+                dto.getValidFrom(), // Datumi i dalje dolaze iz DTO-a
+                dto.getValidTo(),
+                new BigInteger(128, new SecureRandom()),
+                issuerCertX509,
+                requestedExtensions // Prosleđujemo ekstenzije iz CSR-a
+        );
+
+        // 6. Čuvanje u keystore (BEZ PRIVATNOG KLJUČA)
+        String alias = newCert.getSerialNumber().toString();
+        KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
+
+        ks.setCertificateEntry(alias, newCert);
+
+        keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
+
+        // 7. Čuvanje u bazu i ažuriranje statusa CSR-a
+        Certificate certEntity = saveCertificateEntity(newCert, csr.getOwner(), keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
+
+        csr.setStatus(CSR.CsrStatus.APPROVED);
+        csrRepository.save(csr);
+
+        return new CertificateDetailsDTO(certEntity);
+    }
+
 }
+
+

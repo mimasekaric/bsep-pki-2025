@@ -8,12 +8,14 @@ import { IssueCertificateComponent } from './components/issue-certificate/issue-
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { AuthGuard } from './auth.guard';
+import { TokensComponent } from './components/tokens/tokens.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/splash', pathMatch: 'full' },
   { path: 'splash', component: SplashScreenComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'tokens', component: TokensComponent },
   { path: 'verify-email', component: EmailVerificationComponent },
   { path: 'issue-certificate', component: IssueCertificateComponent },
   { path: '**', redirectTo: '/splash' },
