@@ -18,14 +18,16 @@ public class PasswordResetTokenService {
     }
 
     public PasswordResetToken createPasswordResetToken(User user) {
-        tokenRepository.findByUser(user).ifPresent(existingToken -> {
-            tokenRepository.delete(existingToken);
-        });
+        Optional<PasswordResetToken> existingTokenOpt = tokenRepository.findByUser(user);
+
+        if (existingTokenOpt.isPresent()) {
+            tokenRepository.delete(existingTokenOpt.get());
+            tokenRepository.flush();
+        }
 
         PasswordResetToken newToken = new PasswordResetToken(user);
         return tokenRepository.save(newToken);
     }
-
     public Optional<PasswordResetToken> findByToken(String token) {
         return tokenRepository.findByToken(token);
     }

@@ -9,11 +9,12 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  firstName: string;
-  lastName: string;
+  name: string;
+  surname: string;
   email: string;
   password: string;
   confirmPassword: string;
+  organisation: string;
 }
 
 export interface AuthResponse {
@@ -23,8 +24,8 @@ export interface AuthResponse {
 
 export interface User {
   id: number;
-  firstName: string;
-  lastName: string;
+  name: string;
+  surname: string;
   email: string;
   role: string;
 }
@@ -79,8 +80,8 @@ export class AuthService {
     if (!token) {
       return {
         id: 0,
-        firstName: '',
-        lastName: '',
+        name: '',
+        surname: '',
         email: email,
         role: 'USER'
       };
@@ -92,8 +93,8 @@ export class AuthService {
       
       return {
         id: payload.sub ? parseInt(payload.sub) : 0,
-        firstName: payload.firstName || '',
-        lastName: payload.lastName || '',
+        name: payload.name || '',
+        surname: payload.surname || '',
         email: payload.sub || email,
         role: payload.scope ? payload.scope.split(' ')[0] : 'USER'
       };
@@ -101,8 +102,8 @@ export class AuthService {
       console.error('Error decoding JWT token:', error);
       return {
         id: 0,
-        firstName: '',
-        lastName: '',
+        name: '',
+        surname: '',
         email: email,
         role: 'USER'
       };
