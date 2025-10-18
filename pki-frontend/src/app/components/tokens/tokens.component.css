@@ -1,0 +1,114 @@
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.session-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.session-card:hover {
+  border-color: #c4b5fd;
+  background: #f9f5ff;
+  box-shadow: 0 4px 15px rgba(139, 69, 255, 0.08);
+}
+
+.session-info h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #2d1b69;
+  font-weight: 600;
+}
+
+.session-location {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.session-meta {
+  margin-top: 4px;
+}
+
+.current-tag {
+  display: inline-block;
+  background: linear-gradient(135deg, #8b45ff 0%, #a855f7 100%);
+  color: white;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.revoke-button {
+  background: none;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.revoke-button:hover {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+}
+
+.logout-all {
+  display: flex;
+  justify-content: center;
+}
+
+.certificate-button {
+  background: linear-gradient(135deg, #8b45ff 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 16px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.certificate-button:hover:not(:disabled) {
+  box-shadow: 0 8px 25px rgba(139, 69, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.certificate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.certificate-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.certificate-header h2 {
+  color: #2d1b69;
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.certificate-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}

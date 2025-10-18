@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,7 +24,9 @@ public class VerificationTokenService {
         user.setVerificationToken(token);
         userRepository.save(user);
     }
-
+    public List<VerificationToken> getUserTokens(String email){
+            return tokenRepository. getByUser_Email(email);
+    }
     public VerificationToken createVerificationTokenWithExpiry(User user) {
 
         tokenRepository.deleteByUser_Id(user.getId());
