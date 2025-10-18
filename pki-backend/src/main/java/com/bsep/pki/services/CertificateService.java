@@ -592,7 +592,7 @@ public class CertificateService {
     }
 
     @Transactional
-    public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) {
+    public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) throws Exception {
         Certificate certToRevoke = certificateRepository.findBySerialNumber(serialNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Certificate not found"));
 
@@ -611,9 +611,9 @@ public class CertificateService {
         performRevocation(certToRevoke, reason);
     }
 
-    private void performRevocation(Certificate certificate, String reason) {
+    private void performRevocation(Certificate certificate, String reason) throws Exception {
         if (certificate.isRevoked()) return;
-
+        if (reason == null) reason = "unspecified"; // fallback
         certificate.setRevoked(true);
         certificate.setRevocationReason(reason);
         certificate.setRevocationDate(LocalDateTime.now());
@@ -627,8 +627,7 @@ public class CertificateService {
             }
         }
 
-        // TODO: Ovde će doći poziv za CrlService u sledećem koraku
-        // crlService.regenerateCrl(certificate.getIssuerSerialNumber());
+         crlService.regenerateCrl(certificate.getIssuerSerialNumber());
     }
 
 }

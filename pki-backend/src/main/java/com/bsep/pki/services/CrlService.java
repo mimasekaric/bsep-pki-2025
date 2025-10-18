@@ -48,25 +48,31 @@ public class CrlService {
         X509v2CRLBuilder crlBuilder = new X509v2CRLBuilder(issuerX500Name, new Date());
         crlBuilder.setNextUpdate(new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000)); // Npr. 30 dana
 
+
         // Pronađi sve povučene sertifikate od ovog izdavaoca
         List<Certificate> revokedCerts = certificateRepository.findByIssuerSerialNumber(issuerSerial);
         for (Certificate cert : revokedCerts) {
+         /*   int reasonCode = mapReasonCode(cert.getRevocationReason());
             BigInteger serialNumberBigInteger = new BigInteger(cert.getSerialNumber());
             if (cert.isRevoked()) {
-                crlBuilder.addCRLEntry(serialNumberBigInteger, Date.from(cert.getRevocationDate().toInstant(ZoneOffset.UTC)), 0);
-            }
+                crlBuilder.addCRLEntry(serialNumberBigInteger, Date.from(cert.getRevocationDate().toInstant(ZoneOffset.UTC)), reasonCode);
+            }*/
+
+            String serial = cert.getSerialNumber();
+            if (serial == null) throw new IllegalStateException("Revoked certificate has null serial number");
+
+            String reason = cert.getRevocationReason();
+            if (reason == null) reason = "unspecified"; // fallback
+
+            BigInteger serialNumberBigInteger = new BigInteger(serial);
+            int reasonCode = mapReasonCode(reason);
+
+            Date revocationDate = cert.getRevocationDate() != null
+                    ? Date.from(cert.getRevocationDate().toInstant(ZoneOffset.UTC))
+                    : new Date();
+
+            crlBuilder.addCRLEntry(serialNumberBigInteger, revocationDate, reasonCode);
         }
-/*CRL REASON KODOVI :
-CRLReason.unspecified (0)
-CRLReason.keyCompromise (1)
-CRLReason.cACompromise (2)
-CRLReason.affiliationChanged (3)
-CRLReason.superseded (4)
-CRLReason.cessationOfOperation (5)
-CRLReason.certificateHold (6)
-CRLReason.removeFromCRL (8)
-CRLReason.privilegeWithdrawn (9)
-CRLReason.aACompromise (10)*/
 
         // Potpiši CRL
         ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256WithRSA").build(issuerPrivateKey);
@@ -76,6 +82,21 @@ CRLReason.aACompromise (10)*/
         saveCrlToFile(crl, issuerSerial);
     }
 
+    private int mapReasonCode(String reason) {
+        return switch (reason) {
+            case "unspecified" -> 0;
+            case "keyCompromise" -> 1;
+            case "cACompromise" -> 2;
+            case "affiliationChanged" -> 3;
+            case "superseded" -> 4;
+            case "cessationOfOperation" -> 5;
+            case "certificateHold" -> 6;
+            case "removeFromCRL" -> 8;
+            case "privilegeWithdrawn" -> 9;
+            case "aACompromise" -> 10;
+            default -> 0; // fallback unspecified
+        };
+    }
     private void saveCrlToFile(X509CRL crl, String issuerSerial) throws Exception {
         File crlFile = new File(crlBasePath, issuerSerial + ".crl");
         crlFile.getParentFile().mkdirs();

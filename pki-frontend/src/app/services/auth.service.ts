@@ -19,6 +19,7 @@ export interface RegisterRequest {
 export interface AuthResponse {
   accessToken: string;
   email: string;
+  user: string;
 }
 
 export interface User {
@@ -64,7 +65,7 @@ export class AuthService {
   }
 
 
-  private setCurrentUser(email: string): void {
+  public setCurrentUser(email: string): void {
     try {
       const user = this.decodeJWTToken(email);
       this.currentUserSubject.next(user);

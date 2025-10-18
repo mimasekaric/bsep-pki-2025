@@ -30,7 +30,6 @@ public class RevocationController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
             if (authentication == null || !authentication.isAuthenticated()) {
-                // Ovo se ne bi trebalo desiti ako su security filteri pravilno konfigurisani za @Secured ili .anyRequest().authenticated()
                 return ResponseEntity.status(401).body("User not authenticated.");
             }
 
@@ -38,10 +37,9 @@ public class RevocationController {
             Object principal = authentication.getPrincipal();
 
             if (principal instanceof User) {
-                requestingUserId = ((User) principal).getId(); // <--- OVDE DOBIJAŠ UUID
+                requestingUserId = ((User) principal).getId();
             } else {
                  Optional<User> u=userService.getUserByUsername(authentication.getName());
-                // Za JWT, `authentication.getName()` često vraća username.
                 requestingUserId=u.get().getId();
                 //return ResponseEntity.status(403).body("Could not determine requesting user ID.");
             }
