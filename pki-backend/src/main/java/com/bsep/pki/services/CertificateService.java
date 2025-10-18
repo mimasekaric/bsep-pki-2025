@@ -37,6 +37,7 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,7 +73,7 @@ public class CertificateService {
                 subjectAndIssuer, subjectAndIssuer,
                 keyPair.getPublic(), keyPair.getPrivate(),
                 dto.getValidFrom(), dto.getValidTo(),
-                serialNumber, true,  dto
+                serialNumber, true, dto
         );
 
         String alias = serialNumber.toString();
@@ -155,8 +156,6 @@ public class CertificateService {
                 System.err.println("Verifikacija lanca neuspešna: " + ex.getMessage());
                 throw ex;
             }*/
-
-
 
 
             ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
@@ -636,15 +635,13 @@ public class CertificateService {
             }
         }
 
-         crlService.regenerateCrl(certificate.getIssuerSerialNumber());
+        crlService.regenerateCrl(certificate.getIssuerSerialNumber());
     }
-
 
 
     @Transactional
     public CertificateDetailsDTO issueCertificateFromCsr(
-            Long csrId,
-            ApproveCsrDTO dto // <-- PRIMAMO DTO SA EKSTENZIJAMA
+            Long csrId
     ) throws Exception {
 
         // 1. Učitavanje podataka
@@ -652,7 +649,10 @@ public class CertificateService {
                 .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
 
         // DTO sada sadrži serijski broj izdavaoca
-        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
+        String issuerSerialNumber = csr.getSigningCertificateSerialNumber();
+        LocalDateTime validFrom = csr.getRequestedValidFrom();
+        LocalDateTime validTo = csr.getRequestedValidTo();
+        Certificate issuerCertData = validateIssuer(issuerSerialNumber);
         Keystore keystore = issuerCertData.getKeystore();
         String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
         PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
@@ -685,8 +685,8 @@ public class CertificateService {
                 issuerName,
                 subjectPublicKey,
                 issuerPrivateKey,
-                dto.getValidFrom(), // Datumi i dalje dolaze iz DTO-a
-                dto.getValidTo(),
+                validFrom, // Datumi i dalje dolaze iz DTO-a
+                validTo,
                 new BigInteger(128, new SecureRandom()),
                 issuerCertX509,
                 requestedExtensions // Prosleđujemo ekstenzije iz CSR-a
@@ -709,6 +709,16 @@ public class CertificateService {
         return new CertificateDetailsDTO(certEntity);
     }
 
+    public List<CertificateDetailsDTO> getValidCaCertificates() {
+        List<CertificateType> caTypes = List.of(CertificateType.ROOT, CertificateType.INTERMEDIATE);
+
+        List<CertificateDetailsDTO> list = certificateRepository.findByTypeInAndRevokedFalseAndValidToAfter(caTypes, LocalDateTime.now())
+                .stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+        // Pronalazi sve sertifikate koji su tipa ROOT ili INTERMEDIATE, nisu povučeni i nisu istekli
+        return list;
+    }
 }
 
 

@@ -23,6 +23,7 @@ import java.io.StringReader;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -88,12 +89,28 @@ public class CSRService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid CSR PEM format: " + e.getMessage());
         }
+        // Osnovna validacija novih polja
+        if (dto.getSigningCertificateSerialNumber() == null || dto.getSigningCertificateSerialNumber().isBlank()) {
+            throw new IllegalArgumentException("Signing certificate serial number must be provided.");
+        }
+        if (dto.getRequestedValidFrom() == null || dto.getRequestedValidTo() == null) {
+            throw new IllegalArgumentException("Validity period must be provided.");
+        }
+        if (dto.getRequestedValidFrom().isAfter(dto.getRequestedValidTo())) {
+            throw new IllegalArgumentException("'Valid From' date must be before 'Valid To' date.");
+        }
+
+
 
         CSR csr = new CSR();
         csr.setPemContent(dto.getPemContent());
         csr.setOwner(owner);
         csr.setStatus(CSR.CsrStatus.PENDING);
         csr.setCreatedAt(LocalDateTime.now());
+
+        csr.setSigningCertificateSerialNumber(dto.getSigningCertificateSerialNumber());
+        csr.setRequestedValidFrom(dto.getRequestedValidFrom());
+        csr.setRequestedValidTo(dto.getRequestedValidTo());
 
         return csrRepository.save(csr);
     }
@@ -106,6 +123,26 @@ public class CSRService {
         return Extensions.getInstance(attributes[0].getAttrValues().getObjectAt(0));
     }
 
+    public List<CSR> getPendingCsrs() {
+        return csrRepository.findByStatus(CSR.CsrStatus.PENDING);
+    }
+
+    @Transactional
+    public CSR rejectCsr(Long csrId, String reason) {
+        CSR csr = csrRepository.findById(csrId)
+                .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
+
+        if (csr.getStatus() != CSR.CsrStatus.PENDING) {
+            throw new IllegalStateException("Only pending CSRs can be rejected.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Rejection reason cannot be empty.");
+        }
+
+        csr.setStatus(CSR.CsrStatus.REJECTED);
+        csr.setRejectionReason(reason);
+        return csrRepository.save(csr);
+    }
 
 
 }

@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -90,5 +91,11 @@ public class CertificateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);
         }
+    }
+
+    @GetMapping("/ca")
+    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates() {
+        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificates();
+        return ResponseEntity.ok(caCerts);
     }
 }

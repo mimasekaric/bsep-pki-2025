@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/auth/**", "/verify-email").permitAll()
                         .requestMatchers("/api/certificates/**").permitAll()
-                        .requestMatchers("/api/csr/**","/{csrId}/approve").permitAll()
+                        //.requestMatchers("/api/csr/**","/{csrId}/approve").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

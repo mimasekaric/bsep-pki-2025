@@ -19,6 +19,12 @@ import java.time.LocalDateTime;
         private CsrStatus status;
         private LocalDateTime createdAt;
         private String rejectionReason;
+        @Column(nullable = false)
+        private String signingCertificateSerialNumber;
+        @Column(nullable = false)
+        private LocalDateTime requestedValidFrom;
+        @Column(nullable = false)
+        private LocalDateTime requestedValidTo;
 
         public static enum CsrStatus {
             PENDING,

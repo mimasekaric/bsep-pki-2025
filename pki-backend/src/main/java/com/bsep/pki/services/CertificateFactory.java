@@ -17,6 +17,8 @@ import java.math.BigInteger;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Date;
@@ -150,7 +152,7 @@ public class CertificateFactory {
     public X509Certificate createCertificateFromCsrData(
             X500Name subject, X500Name issuer,
             PublicKey subjectPublicKey, PrivateKey issuerPrivateKey,
-            ZonedDateTime validFrom, ZonedDateTime validTo,
+            LocalDateTime validFrom, LocalDateTime validTo,
             BigInteger serialNumber,
             X509Certificate issuerCert, // Izdavalac
             Extensions requestedExtensions // Ekstenzije pročitane iz CSR-a
@@ -158,7 +160,7 @@ public class CertificateFactory {
 
         JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
                 issuer, serialNumber,
-                Date.from(validFrom.toInstant()), Date.from(validTo.toInstant()),
+                Date.from(validFrom.toInstant(ZoneOffset.UTC)), Date.from(validTo.toInstant(ZoneOffset.UTC)),
                 subject, subjectPublicKey);
 
         // === VALIDACIJA I KOPIRANJE EKSTENZIJA IZ CSR-a ===
