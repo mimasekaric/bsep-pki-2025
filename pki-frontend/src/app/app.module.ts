@@ -3,6 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { SplashScreenComponent } from './components/splash-screen/splash-screen.component';
 import { LoginComponent } from './components/login/login.component';
 import { RegisterComponent } from './components/register/register.component';
 import { EmailVerificationComponent } from './components/email-verification/email-verification.component';
@@ -13,6 +14,7 @@ import { AuthGuard } from './auth.guard';
 @NgModule({
   declarations: [
     AppComponent,
+    SplashScreenComponent,
     LoginComponent,
     RegisterComponent,
     EmailVerificationComponent,

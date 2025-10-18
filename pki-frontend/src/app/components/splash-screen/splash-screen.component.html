@@ -1,0 +1,41 @@
+<div class="splash-container">
+  <!-- Loading indicator -->
+  <div class="loading-indicator" *ngIf="!videoLoaded && !videoError">
+    <div class="spinner"></div>
+    <p>Učitavam video...</p>
+  </div>
+
+  <!-- Video element sa pojačanim autoplay atributima -->
+  <video 
+    #splashVideo
+    class="splash-video"
+    [class.hidden]="!videoLoaded"
+    autoplay
+    muted
+    playsinline
+    preload="auto"
+    loop="false"
+    [defaultMuted]="true"
+    webkit-playsinline="true"
+    x5-video-player-type="h5"
+    x5-video-player-fullscreen="true"
+    (ended)="onVideoEnded()"
+    (loadeddata)="onVideoLoaded()"
+    (timeupdate)="onTimeUpdate($event)">
+    <source src="assets/Untitled.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+  
+  <!-- Uklanjam manual play dugme - fokus na automatsko pokretanje -->
+  
+  <!-- Error message sa automatskim pokušajima -->
+  <div class="error-message" *ngIf="videoError">
+    <div class="spinner"></div>
+    <p>Pokušavam da učitam video...</p>
+  </div>
+  
+  <!-- Skip button -->
+  <button class="skip-button" (click)="skipSplash()">
+    Preskoči
+  </button>
+</div>
