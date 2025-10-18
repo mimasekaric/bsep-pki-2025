@@ -84,49 +84,32 @@ export class ResetPasswordComponent implements OnInit {
       this.isLoading = true;
       this.errorMessage = '';
 
-      const resetData = {
-        token: this.resetToken,
-        newPassword: this.resetPasswordForm.get('newPassword')?.value
-      };
+      const newPassword = this.resetPasswordForm.get('newPassword')?.value;
 
       // Poziv ka backend servisu za reset lozinke sa tokenom
-      // this.authService.resetPasswordWithToken(resetData).subscribe({
-      //   next: (response) => {
-      //     this.isLoading = false;
-      //     Swal.fire({
-      //       icon: 'success',
-      //       title: 'Uspešno!',
-      //       text: 'Lozinka je uspešno resetovana!',
-      //       confirmButtonColor: '#8b45ff',
-      //       confirmButtonText: 'U redu'
-      //     }).then(() => {
-      //       this.router.navigate(['/login']);
-      //     });
-      //   },
-      //   error: (error) => {
-      //     this.isLoading = false;
-      //     Swal.fire({
-      //       icon: 'error',
-      //       title: 'Greška!',
-      //       text: error.error?.message || 'Greška pri promeni lozinke',
-      //       confirmButtonColor: '#8b45ff'
-      //     });
-      //   }
-      // });
-
-      // Simulacija uspešne promene lozinke
-      setTimeout(() => {
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'success',
-          title: 'Uspešno!',
-          text: 'Lozinka je uspešno resetovana!',
-          confirmButtonColor: '#8b45ff',
-          confirmButtonText: 'U redu'
-        }).then(() => {
-          this.router.navigate(['/login']);
-        });
-      }, 1500);
+      this.authService.resetPassword(this.resetToken, newPassword).subscribe({
+        next: (response) => {
+          this.isLoading = false;
+          Swal.fire({
+            icon: 'success',
+            title: 'Uspešno!',
+            text: 'Lozinka je uspešno resetovana!',
+            confirmButtonColor: '#8b45ff',
+            confirmButtonText: 'U redu'
+          }).then(() => {
+            this.router.navigate(['/login']);
+          });
+        },
+        error: (error) => {
+          this.isLoading = false;
+          Swal.fire({
+            icon: 'error',
+            title: 'Greška!',
+            text: error.error?.message || 'Greška pri promeni lozinke',
+            confirmButtonColor: '#8b45ff'
+          });
+        }
+      });
     }
   }
 

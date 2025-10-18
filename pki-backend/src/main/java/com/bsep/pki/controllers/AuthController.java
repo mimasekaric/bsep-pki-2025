@@ -74,21 +74,16 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        // Kontroler samo delegira poziv servisu.
-        // Odgovor je uvek 200 OK da se ne bi otkrivalo postojanje emaila.
         passwordResetService.initiatePasswordReset(request.email());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
-        // Koristimo try-catch da bismo uhvatili greške iz servisnog sloja
-        // i pretvorili ih u smislene HTTP odgovore.
         try {
             passwordResetService.finalizePasswordReset(request.token(), request.newPassword());
             return ResponseEntity.ok("Lozinka je uspešno resetovana.");
         } catch (InvalidTokenException e) {
-            // Vraćamo poruku iz izuzetka klijentu.
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
