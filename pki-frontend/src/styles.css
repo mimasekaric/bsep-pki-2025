@@ -1,1 +1,21 @@
 /* You can add global styles to this file, and also import other style files */
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Centering Material Dialog */
+.centered-dialog .mat-mdc-dialog-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.centered-dialog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure dialog is properly positioned */
+.mat-mdc-dialog-container {
+  max-height: 90vh;
+  overflow: auto;
+}

@@ -641,18 +641,18 @@ public class CertificateService {
 
     @Transactional
     public CertificateDetailsDTO issueCertificateFromCsr(
-            Long csrId
+            Long csrId, ApproveCsrDTO signingCertificateSerialNumber
     ) throws Exception {
 
-        // 1. Učitavanje podataka
+
         CSR csr = csrRepository.findById(csrId)
                 .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
 
-        // DTO sada sadrži serijski broj izdavaoca
-        String issuerSerialNumber = csr.getSigningCertificateSerialNumber();
+        // Sada koristimo 'signingCertificateSerialNumber' koji je CA admin izabrao
+
         LocalDateTime validFrom = csr.getRequestedValidFrom();
         LocalDateTime validTo = csr.getRequestedValidTo();
-        Certificate issuerCertData = validateIssuer(issuerSerialNumber);
+        Certificate issuerCertData = validateIssuer(signingCertificateSerialNumber.getSigningCertificateSerialNumber());
         Keystore keystore = issuerCertData.getKeystore();
         String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
         PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
@@ -660,7 +660,7 @@ public class CertificateService {
                 keystore.getId(), password.toCharArray(), issuerCertData.getAlias()
         )[0];
 
-        // 2. Parsiranje i validacija CSR-a
+
         PKCS10CertificationRequest parsedCsr = csrService.parseCsr(csr.getPemContent());
         csrService.validateCsr(parsedCsr);
 
@@ -678,21 +678,20 @@ public class CertificateService {
 
         Extensions requestedExtensions = csrService.getExtensionsFromCsr(parsedCsr);
 
-        // 4. Kreiranje sertifikata
-        // Potrebna nam je nova metoda u fabrici
+
         X509Certificate newCert = certificateFactory.createCertificateFromCsrData(
                 subjectName,
                 issuerName,
                 subjectPublicKey,
                 issuerPrivateKey,
-                validFrom, // Datumi i dalje dolaze iz DTO-a
+                validFrom,
                 validTo,
                 new BigInteger(128, new SecureRandom()),
                 issuerCertX509,
-                requestedExtensions // Prosleđujemo ekstenzije iz CSR-a
+                requestedExtensions
         );
 
-        // 6. Čuvanje u keystore (BEZ PRIVATNOG KLJUČA)
+
         String alias = newCert.getSerialNumber().toString();
         KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
 
@@ -700,7 +699,6 @@ public class CertificateService {
 
         keystoreService.saveKeyStore(ks, keystore.getId(), password.toCharArray());
 
-        // 7. Čuvanje u bazu i ažuriranje statusa CSR-a
         Certificate certEntity = saveCertificateEntity(newCert, csr.getOwner(), keystore, CertificateType.END_ENTITY, issuerCertData.getSerialNumber());
 
         csr.setStatus(CSR.CsrStatus.APPROVED);
@@ -709,15 +707,15 @@ public class CertificateService {
         return new CertificateDetailsDTO(certEntity);
     }
 
-    public List<CertificateDetailsDTO> getValidCaCertificates() {
-        List<CertificateType> caTypes = List.of(CertificateType.ROOT, CertificateType.INTERMEDIATE);
+    public List<CertificateDetailsDTO> getValidCaCertificatesForUser(UUID ownerId) {
+        List<CertificateType> caTypes = List.of(CertificateType.INTERMEDIATE);
 
-        List<CertificateDetailsDTO> list = certificateRepository.findByTypeInAndRevokedFalseAndValidToAfter(caTypes, LocalDateTime.now())
+        return certificateRepository.findByOwnerIdAndTypeInAndRevokedFalseAndValidToAfter(
+                        ownerId, caTypes, LocalDateTime.now()
+                )
                 .stream()
                 .map(CertificateDetailsDTO::new)
                 .collect(Collectors.toList());
-        // Pronalazi sve sertifikate koji su tipa ROOT ili INTERMEDIATE, nisu povučeni i nisu istekli
-        return list;
     }
 }
 

@@ -22,8 +22,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -82,6 +84,16 @@ public  Optional<User> getUserByUsername(String username) {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+    }
+
+    @Override
+    public List<UserResponseDTO> findUsersByRole(UserRole role) {
+            List<User> users = userRepository.findByRole(role);
+
+        return users.stream()
+                .map(userMapper::toDto)
+                .collect(Collectors.toList());
+
     }
 
 }

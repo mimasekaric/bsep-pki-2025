@@ -1,6 +1,7 @@
 package com.bsep.pki.services;
 
 import com.bsep.pki.dtos.requests.CSRRequestDTO;
+import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.exceptions.ResourceNotFoundException;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.CSRRepository;
@@ -24,6 +25,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,13 +34,13 @@ public class CSRService {
     private final CSRRepository csrRepository;
     private final UserRepository userRepository;
 
-    // Metoda za parsiranje CSR-a iz PEM stringa
+
     public PKCS10CertificationRequest parseCsr(String pem) throws Exception {
 
         String pemContent = pem
                 .replace("-----BEGIN CERTIFICATE REQUEST-----", "")
                 .replace("-----END CERTIFICATE REQUEST-----", "")
-                .replaceAll("\\s", ""); // Uklonimo sve bele karaktere (razmake, \n, \r, itd.)
+                .replaceAll("\\s", "");
 
         try {
             // Dekodiramo čisti Base64 string u niz bajtova
@@ -53,9 +55,8 @@ public class CSRService {
         }
     }
 
-    // Metoda za validaciju CSR-a
     public void validateCsr(PKCS10CertificationRequest csr) throws Exception {
-        // 1. Provera digitalnog potpisa
+        // digitalni potpis
         JcaPKCS10CertificationRequest jcaCsr = new JcaPKCS10CertificationRequest(csr);
         PublicKey publicKey = jcaCsr.getPublicKey();
 
@@ -63,7 +64,7 @@ public class CSRService {
             throw new SecurityException("CSR signature is invalid!");
         }
 
-        // 2. Provera jačine javnog ključa
+        // jacina javnog kljuca
         if (publicKey instanceof RSAPublicKey) {
             RSAPublicKey rsaKey = (RSAPublicKey) publicKey;
             int keySize = rsaKey.getModulus().bitLength();
@@ -72,7 +73,7 @@ public class CSRService {
             }
         }
 
-        // 3. Provera da li su podaci o subjektu prisutni
+        // da li ima podataka o subjektu
         if (csr.getSubject().getRDNs().length == 0) {
             throw new IllegalArgumentException("CSR subject data is empty.");
         }
@@ -81,16 +82,23 @@ public class CSRService {
     @Transactional
     public CSR submitCsr(CSRRequestDTO dto, String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + ownerEmail));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + ownerEmail));
+
+        User approver = userRepository.findById(dto.getApproverId())
+                .orElseThrow(() -> new ResourceNotFoundException("Approver not found: " + dto.getApproverId()));
+
+        if (approver.getRole() != UserRole.ADMIN && approver.getRole() != UserRole.CA_USER) {
+            throw new IllegalArgumentException("Selected approver is not a CA user.");
+        }
 
         try {
-            // Koristimo CsrService da validiramo da li je PEM uopšte validan pre čuvanja
+
             parseCsr(dto.getPemContent());
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid CSR PEM format: " + e.getMessage());
         }
-        // Osnovna validacija novih polja
-        if (dto.getSigningCertificateSerialNumber() == null || dto.getSigningCertificateSerialNumber().isBlank()) {
+
+        if (dto.getApproverId() == null) {
             throw new IllegalArgumentException("Signing certificate serial number must be provided.");
         }
         if (dto.getRequestedValidFrom() == null || dto.getRequestedValidTo() == null) {
@@ -108,7 +116,7 @@ public class CSRService {
         csr.setStatus(CSR.CsrStatus.PENDING);
         csr.setCreatedAt(LocalDateTime.now());
 
-        csr.setSigningCertificateSerialNumber(dto.getSigningCertificateSerialNumber());
+        csr.setApproverId(dto.getApproverId());
         csr.setRequestedValidFrom(dto.getRequestedValidFrom());
         csr.setRequestedValidTo(dto.getRequestedValidTo());
 
@@ -123,8 +131,8 @@ public class CSRService {
         return Extensions.getInstance(attributes[0].getAttrValues().getObjectAt(0));
     }
 
-    public List<CSR> getPendingCsrs() {
-        return csrRepository.findByStatus(CSR.CsrStatus.PENDING);
+    public List<CSR> getPendingCsrs(UUID approverId) {
+        return csrRepository.findByApproverIdAndStatus(approverId, CSR.CsrStatus.PENDING);
     }
 
     @Transactional

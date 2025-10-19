@@ -21,7 +21,7 @@ export interface CsrResponse {
     // ...
   };
   
-  signingCertificateSerialNumber: string;
+  caId: string;
   requestedValidFrom: string;
   requestedValidTo: string;
 }
@@ -30,6 +30,9 @@ export interface CaCertificate {
   serialNumber: string;
   subjectDN: string;
   // ...
+}
+export interface ApproveCsrPayload {
+  signingCertificateSerialNumber: string;
 }
 
 export interface RejectCsrPayload {
@@ -81,11 +84,9 @@ export class CsrService {
   }
 
 
-  approveCsr(csrId: number, payload: any): Observable<any> { 
+  approveCsr(csrId: number, payload: ApproveCsrPayload): Observable<any> {
     const headers = this.createAuthHeaders();
-    if (!headers) {
-      return throwError(() => new Error('Korisnik nije autentifikovan.'));
-    }
+    if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
     
     return this.http.post<any>(`${this.baseUrl}/csr/${csrId}/approve`, payload, { headers });
   }

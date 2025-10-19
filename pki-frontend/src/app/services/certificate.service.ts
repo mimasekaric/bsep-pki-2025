@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, throwError } from 'rxjs';
+import { CaCertificate } from './csr.service';
+import { HttpHeaders } from '@angular/common/http';
+import { AuthService } from './auth.service';
 
 export interface CertificateIssueDTO {
   commonName: string;
@@ -36,7 +39,7 @@ export interface CertificateWithPrivateKeyDTO {
 export class CertificateService {
   private apiUrl = 'http://localhost:8080/api/certificates';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private authService: AuthService) { }
 
   issueRootCertificate(certificateData: CertificateIssueDTO): Observable<CertificateDetailsDTO> {
     return this.http.post<CertificateDetailsDTO>(`${this.apiUrl}/issue-root`, certificateData);
@@ -44,5 +47,23 @@ export class CertificateService {
 
   issueCertificate(certificateData: CertificateIssueDTO): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/issue`, certificateData);
+  }
+
+    getMyCaCertificates(): Observable<CertificateDetailsDTO[]> {
+    const headers = this.createAuthHeaders();
+    if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
+    
+    // Pozivamo novi endpoint
+    return this.http.get<CertificateDetailsDTO[]>(`${this.apiUrl}/ca`, { headers });
+  }
+  private createAuthHeaders(): HttpHeaders | null {
+    const token = this.authService.getToken();
+    if (!token) {
+      return null;
+    }
+    return new HttpHeaders({
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${token}`
+    });
   }
 }

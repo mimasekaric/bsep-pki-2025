@@ -94,8 +94,11 @@ public class CertificateController {
     }
 
     @GetMapping("/ca")
-    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates() {
-        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificates();
+    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates(Principal principal) {
+        String ca_user_mail = principal.getName();
+        User ca_user = userService.findByEmail(ca_user_mail);
+        UUID userId = ca_user.getId();
+        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificatesForUser(userId);
         return ResponseEntity.ok(caCerts);
     }
 }

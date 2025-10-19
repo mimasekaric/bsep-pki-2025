@@ -16,6 +16,16 @@ import {HTTP_INTERCEPTORS } from '@angular/common/http';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
 import { NavbarComponent } from './layout/navbar/navbar.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ApproveDialogComponent } from './components/approve-dialog.component.ts/approve-dialog.component.ts.component';
+
+
 
 @NgModule({
   declarations: [
@@ -27,14 +37,23 @@ import { NavbarComponent } from './layout/navbar/navbar.component';
     TokensComponent,
     CsrUploadComponent,
     CsrListComponent,
-    NavbarComponent
+    NavbarComponent,
+    ApproveDialogComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
     ReactiveFormsModule,
-    FormsModule
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+    BrowserAnimationsModule
+    
   ],
    providers: [
     AuthService, // Pruži AuthService ako ga koristiš za logout

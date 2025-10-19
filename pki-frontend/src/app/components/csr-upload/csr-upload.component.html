@@ -15,10 +15,11 @@
         
         <div class="form-group">
           <label for="caSelector">Izaberite CA za potpisivanje</label>
-          <select id="caSelector" formControlName="signingCertificateSerialNumber" class="form-control">
+          <select id="caSelector" formControlName="approverId" class="form-control">
             <option value="" disabled selected>-- Izaberite CA --</option>
-            <option *ngFor="let ca of availableCAs" [value]="ca.serialNumber">
-              {{ ca.subjectDN }}
+          <option *ngFor="let user of availableCAs" [value]="user.id">
+              <!-- Prikazujemo podatke iz CaUser interfejsa -->
+              {{ user.name }} {{ user.surname }} ({{ user.email }})
             </option>
           </select>
          
