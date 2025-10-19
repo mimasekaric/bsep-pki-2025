@@ -7,10 +7,10 @@
     <div class="navbar-links">
       <!-- Levi deo -->
       <ul class="nav-group">
-        <li *ngIf="isLoggedIn && !isAdmin && !isCaUser">
+        <li *ngIf="isLoggedIn && !isAdmin && !isCaUser && !mustChangePassword">
           <a routerLink="/csr/upload" routerLinkActive="active-link">Kreiraj CSR</a>
         </li>
-        <li *ngIf="isLoggedIn && (isAdmin || isCaUser)">
+        <li *ngIf="isLoggedIn && (isAdmin || isCaUser) && !mustChangePassword">
           <a routerLink="/csr/list-pending" routerLinkActive="active-link">CSR Zahtevi</a>
         </li>
       </ul>

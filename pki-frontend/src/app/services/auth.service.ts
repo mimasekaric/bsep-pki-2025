@@ -22,6 +22,7 @@ export interface AuthResponse {
   accessToken: string;
   email: string;
   user: string;
+  mustChangePassword?: boolean; 
 }
 
 export interface User {
@@ -30,6 +31,7 @@ export interface User {
   surname: string;
   email: string;
   role: string;
+  mustChangePassword?: boolean;
 }
 
 export interface CAUserRequest {
@@ -98,7 +100,8 @@ export class AuthService {
         name: '',
         surname: '',
         email: email,
-        role: 'USER'
+        role: 'USER',
+        mustChangePassword: false
       };
     }
 
@@ -111,7 +114,8 @@ export class AuthService {
         name: payload.name || '',
         surname: payload.surname || '',
         email: payload.sub || email,
-        role: payload.scope ? payload.scope.split(' ')[0] : 'USER'
+        role: payload.scope ? payload.scope.split(' ')[0] : 'USER',
+        mustChangePassword: payload.mustChangePassword || false
       };
     } catch (error) {
       console.error('Error decoding JWT token:', error);
@@ -169,21 +173,8 @@ export class AuthService {
     return localStorage.getItem('jwt_token');
   }
 
-  createCAUser(caUserData: CAUserRequest): Observable<any> {
-    const token = this.getToken();
-    return this.http.post(`${this.apiUrl}/create-ca-user`, caUserData, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  }
-
-  changePassword(changePasswordData: ChangePasswordRequest): Observable<any> {
-    const token = this.getToken();
-    return this.http.post(`${this.apiUrl}/change-password`, changePasswordData, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  processLoginResponse(response: AuthResponse): void {
+  this.setToken(response.accessToken);
+  this.setCurrentUser(response.email);
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { AuthService } from './auth.service';
+import { AuthResponse, AuthService, ChangePasswordRequest } from './auth.service';
 
 export interface CaUser {
   id: string; // UUID je string
@@ -10,6 +10,20 @@ export interface CaUser {
   email: string;
 }
 
+export interface CAUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string;
+}
+
+export interface UserResponse {
+  id: string;
+  name: string;
+  surname: string;
+  email: string;
+  role: string;
+}
 @Injectable({
   providedIn: 'root'
 })
@@ -36,4 +50,24 @@ export class UserService {
 
     return this.http.get<CaUser[]>(`${this.apiUrl}/ca`, { headers });
   }
+
+  createCAUser(userData: CAUserRequest): Observable<UserResponse> { // <-- DEFINICIJA METODE
+    const headers = this.createAuthHeaders();
+    if (!headers) {
+      // Ako nema tokena, admin nije ulogovan. Vraćamo grešku.
+      return throwError(() => new Error('Admin nije autentifikovan.'));
+    }
+
+    // Pozivamo novi endpoint koji smo definisali na backendu
+    return this.http.post<UserResponse>(`${this.apiUrl}/create-ca-user`, userData, { headers });
+  }
+   changePassword(changePasswordData: ChangePasswordRequest): Observable<AuthResponse> {
+     const token = this.authService.getToken();
+    return this.http.post<AuthResponse>(`${this.apiUrl}/change-password`, changePasswordData, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }
+  
 }

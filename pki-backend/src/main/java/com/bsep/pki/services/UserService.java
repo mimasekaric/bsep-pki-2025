@@ -3,6 +3,7 @@ package com.bsep.pki.services;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
 import com.bsep.pki.dtos.requests.ChangePasswordDTO;
+import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.events.OnRegistrationCompletedEvent;
@@ -15,14 +16,27 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +44,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserService implements IUserService, UserDetailsService {
 
     private final UserRepository userRepository;
@@ -39,7 +53,9 @@ public class UserService implements IUserService, UserDetailsService {
     private final ApplicationEventPublisher eventPublisher;
     private final PasswordGeneratorService passwordGenerator;
     private final EmailService emailService;
-
+    private final JwtEncoder jwtEncoder;
+    @Value("${app.jwt.expiration}")
+    private long jwtExpirySeconds;
     @Override
     @Transactional
     public UserResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO) {
@@ -152,29 +168,45 @@ public  Optional<User> getUserByUsername(String username) {
         emailService.sendEmail(caUser.getEmail(), subject, message);
     }
 
-    public void changePassword(ChangePasswordDTO changePasswordDTO, String userEmail) {
+    public LoginResponseDTO changePassword(ChangePasswordDTO changePasswordDTO, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        // Proveri trenutnu lozinku
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         if (!passwordEncoder.matches(changePasswordDTO.getCurrentPassword(), user.getPassword())) {
             throw new RuntimeException("Current password is incorrect");
         }
-        
-        // Proveri da li se nova lozinka i potvrda poklapaju
+
         if (!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {
             throw new RuntimeException("New password and confirmation do not match");
         }
-        
-        // Proveri da li je nova lozinka dovoljno jaka
+
         if (changePasswordDTO.getNewPassword().length() < 8) {
             throw new RuntimeException("New password must be at least 8 characters long");
-        }
-        
-        // Ažuriraj lozinku
+            }
+
         user.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
         user.setMustChangePassword(false);
         userRepository.save(user);
+
+
+        String scope = "ROLE_" + user.getRole().name();
+
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("self")
+                .issuedAt(now)
+                .expiresAt(now.plus(jwtExpirySeconds, ChronoUnit.SECONDS))
+                .subject(user.getId().toString())
+                .claim("scope", scope)
+                .claim("mustChangePassword", false)
+                .build();
+
+        JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
+        JwtEncoderParameters encoderParameters = JwtEncoderParameters.from(jwsHeader, claims);
+        String token = this.jwtEncoder.encode(encoderParameters).getTokenValue();
+
+        return new LoginResponseDTO(token, userEmail, false);
     }
+
 
 }

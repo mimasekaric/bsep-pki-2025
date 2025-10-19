@@ -24,26 +24,57 @@ export class LoginComponent {
     });
   }
 
-  onSubmit() {
-    if (this.loginForm.valid) {
-      this.isLoading = true;
-      this.errorMessage = '';
+  // onSubmit() {
+  //   if (this.loginForm.valid) {
+  //     this.isLoading = true;
+  //     this.errorMessage = '';
 
-      this.authService.login(this.loginForm.value).subscribe({
-        next: (response) => {
-          console.log('Login successful:', response);
-          console.log('Current user:', this.authService.getCurrentUser());
-          // Ukloni redirect na dashboard za sada
-          this.isLoading = false;
-        },
-        error: (error) => {
-          console.error('Login error:', error);
-          this.errorMessage = error.error?.message || 'Login failed';
-          this.isLoading = false;
+  //     this.authService.login(this.loginForm.value).subscribe({
+  //       next: (response) => {
+  //         console.log('Login successful:', response);
+  //         console.log('Current user:', this.authService.getCurrentUser());
+  //         // Ukloni redirect na dashboard za sada
+  //         this.isLoading = false;
+  //       },
+  //       error: (error) => {
+  //         console.error('Login error:', error);
+  //         this.errorMessage = error.error?.message || 'Login failed';
+  //         this.isLoading = false;
+  //       }
+  //     });
+  //   }
+  // }
+
+  onSubmit() {
+  if (this.loginForm.valid) {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.authService.login(this.loginForm.value).subscribe({
+      next: (response) => {
+        console.log('Login successful:', response);
+        
+       
+        if (response.mustChangePassword) {
+ 
+          this.router.navigate(['/change-password'], { 
+            queryParams: { forced: 'true' } 
+          });
+        } else {
+          
+          this.router.navigate(['/issue-certificate']);
         }
-      });
-    }
+        
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Login error:', error);
+        this.errorMessage = error.error?.message || 'Login failed';
+        this.isLoading = false;
+      }
+    });
   }
+}
 
   goToRegister() {
     this.router.navigate(['/register']);

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from 'src/app/services/user.service';
 
 export interface CAUserRequest {
   firstName: string;
@@ -22,7 +23,7 @@ export class AdminComponent {
 
   constructor(
     private fb: FormBuilder,
-    private authService: AuthService
+    private userService: UserService
   ) {
     this.caUserForm = this.fb.group({
       firstName: ['', [Validators.required, Validators.minLength(2)]],
@@ -38,7 +39,7 @@ export class AdminComponent {
       this.errorMessage = '';
       this.successMessage = '';
 
-      this.authService.createCAUser(this.caUserForm.value).subscribe({
+      this.userService.createCAUser(this.caUserForm.value).subscribe({
         next: (response) => {
           this.successMessage = 'CA korisnik uspešno kreiran! Privremena lozinka je poslata na email.';
           this.isLoading = false;

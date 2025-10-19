@@ -124,37 +124,5 @@ public class AuthController {
     }
 
 
-    @PostMapping("/create-ca-user")
-    public ResponseEntity<?> createCAUser(@RequestBody CAUserRegistrationDTO caUserDTO, 
-                                         Authentication authentication) {
-        try {
-            String adminEmail = authentication.getName();
-            UserResponseDTO caUser = userService.createCAUser(caUserDTO, adminEmail);
-            return ResponseEntity.ok(caUser);
-        } catch (RuntimeException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("status", "error");
-            error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
-        }
-    }
 
-    @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO,
-                                          Authentication authentication) {
-        try {
-            String userEmail = authentication.getName();
-            userService.changePassword(changePasswordDTO, userEmail);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "Password changed successfully");
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("status", "error");
-            error.put("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
-        }
-    }
 }

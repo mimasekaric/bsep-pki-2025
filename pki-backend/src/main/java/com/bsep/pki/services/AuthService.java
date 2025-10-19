@@ -4,6 +4,7 @@ import com.bsep.pki.dtos.requests.LoginRequestDTO;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
+import com.bsep.pki.models.User;
 import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.services.interfaces.IUserService;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +49,11 @@ public class AuthService implements IAuthService {
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
         );
 
+
+        String email = authentication.getName();
+        User user = userService.findByEmail(email);
+        boolean mustChange = user.isMustChangePassword();
+
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
@@ -57,6 +63,7 @@ public class AuthService implements IAuthService {
                 .claim("scope", authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.joining(" ")))
+                .claim("mustChangePassword", mustChange)
                 .build();
 
         JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
@@ -65,7 +72,7 @@ public class AuthService implements IAuthService {
 
         String token = this.jwtEncoder.encode(encoderParameters).getTokenValue();
 
-        return ResponseEntity.ok(new LoginResponseDTO(token, authentication.getName()));
+        return ResponseEntity.ok(new LoginResponseDTO(token, authentication.getName(),mustChange));
     }
 
     @Override

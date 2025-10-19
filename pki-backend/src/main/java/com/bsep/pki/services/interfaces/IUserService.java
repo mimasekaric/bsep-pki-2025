@@ -3,6 +3,7 @@ package com.bsep.pki.services.interfaces;
 import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
 import com.bsep.pki.dtos.requests.ChangePasswordDTO;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
+import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.User;
@@ -15,7 +16,7 @@ public interface IUserService {
     UserResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO);
     User findByEmail(String email);
     List<UserResponseDTO> findUsersByRole(UserRole role);
-    void changePassword(ChangePasswordDTO changePasswordDTO, String userEmail);
+    LoginResponseDTO changePassword(ChangePasswordDTO changePasswordDTO, String userEmail);
     UserResponseDTO createCAUser(CAUserRegistrationDTO caUserDTO, String adminEmail);
 
 
