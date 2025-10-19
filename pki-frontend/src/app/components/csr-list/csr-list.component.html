@@ -1,0 +1,53 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header">
+      <h2>Zahtevi za Potpisivanje Sertifikata (CSR)</h2>
+      <p>Lista svih zahteva koji čekaju na obradu.</p>
+    </div>
+    <div class="card-body">
+      <!-- Prikaz statusnih poruka -->
+      <div *ngIf="isLoading" class="status-message-container">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+      <div *ngIf="!isLoading && errorMessage" class="status-message-container">
+        <div class="alert alert-danger">{{ errorMessage }}</div>
+      </div>
+      <div *ngIf="!isLoading && !errorMessage && pendingCsrs.length === 0" class="status-message-container">
+        <div class="alert alert-info">Trenutno nema zahteva na čekanju.</div>
+      </div>
+
+      <!-- Tabela -->
+      <table *ngIf="!isLoading && pendingCsrs.length > 0" class="table table-hover">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Podnosilac</th>
+            <th scope="col">Kreirano</th>
+            <th scope="col">Traženi Izdavalac (SN)</th>
+            <th scope="col">Akcije</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let csr of pendingCsrs">
+            <td><strong>#{{ csr.id }}</strong></td>
+            <td>{{ csr.owner.email }}</td>
+            <td>{{ csr.createdAt | date:'dd.MM.yyyy. HH:mm' }}</td>
+            <td [title]="csr.caId">
+              {{ csr.caId | slice:0:20 }}...
+            </td>
+            <td>
+              <button class="btn btn-sm btn-success me-2" (click)="openApproveDialog(csr)">
+                Odobri
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="openRejectDialog(csr)">
+                Odbij
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

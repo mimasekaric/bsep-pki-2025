@@ -1,0 +1,79 @@
+<div class="certificate-container">
+  <div class="certificate-card">
+    <div class="certificate-header">
+      <h2>Podnošenje CSR Zahteva</h2>
+      <p>Popunite podatke i priložite vaš CSR fajl.</p>
+    </div>
+
+
+    <form [formGroup]="csrForm" (ngSubmit)="onSubmit()" class="certificate-form">
+
+    
+      <div class="form-section">
+        <h3 class="section-title">Parametri Sertifikata</h3>
+        
+        
+        <div class="form-group">
+          <label for="caSelector">Izaberite CA za potpisivanje</label>
+          <select id="caSelector" formControlName="approverId" class="form-control">
+            <option value="" disabled selected>-- Izaberite CA --</option>
+          <option *ngFor="let user of availableCAs" [value]="user.id">
+              <!-- Prikazujemo podatke iz CaUser interfejsa -->
+              {{ user.name }} {{ user.surname }} ({{ user.email }})
+            </option>
+          </select>
+         
+          <div *ngIf="csrForm.get('signingCertificateSerialNumber')?.touched && csrForm.get('signingCertificateSerialNumber')?.invalid" class="error-message">
+            Izbor CA je obavezan.
+          </div>
+        </div>
+
+      
+        <div class="form-row">
+          <div class="form-group">
+            <label for="validFrom">Važi od</label>
+            <input type="datetime-local" id="validFrom" formControlName="requestedValidFrom" class="form-control">
+            <div *ngIf="csrForm.get('requestedValidFrom')?.touched && csrForm.get('requestedValidFrom')?.invalid" class="error-message">
+              Datum početka je obavezan.
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="validTo">Važi do</label>
+            <input type="datetime-local" id="validTo" formControlName="requestedValidTo" class="form-control">
+            <div *ngIf="csrForm.get('requestedValidTo')?.touched && csrForm.get('requestedValidTo')?.invalid" class="error-message">
+              Datum isteka je obavezan.
+            </div>
+          </div>
+        </div>
+      </div>
+ 
+    
+      <div class="form-section">
+        <h3 class="section-title">Upload CSR Fajla</h3>
+        <div class="form-group">
+          <label for="csrFile">CSR Fajl (.pem ili .csr)</label>
+          <input type="file" class="d-none" #fileInput (change)="onFileSelected($event)" accept=".csr,.pem">
+          <div class="d-flex align-items-center gap-3">
+            <button type="button" class="certificate-button" (click)="fileInput.click()">Izaberi Fajl</button>
+            <span *ngIf="selectedFile" class="text-muted">{{ selectedFile.name }}</span>
+            <span *ngIf="!selectedFile" class="text-muted">Nijedan fajl nije izabran</span>
+          </div>
+        </div>
+      </div>
+
+  
+      <div *ngIf="errorMessage" class="global-error">
+        <p>{{ errorMessage }}</p>
+      </div>
+      <div *ngIf="successMessage" class="success-message">
+        <p>{{ successMessage }}</p>
+      </div>
+
+      <button type="submit" class="certificate-button w-100" [disabled]="csrForm.invalid || !pemContent || isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm"></span>
+        <span *ngIf="!isLoading">Pošalji Zahtev</span>
+      </button>
+
+    </form>
+  </div>
+</div>

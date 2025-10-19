@@ -1,0 +1,188 @@
+<div class="certificate-container">
+  <div class="certificate-card">
+    <div class="certificate-header">
+      <h2>Izdavanje Sertifikata</h2>
+      <p>Popunite informacije za novi sertifikat</p>
+    </div>
+
+    <div class="certificate-type-toggle">
+      <label class="toggle-container">
+        <input type="checkbox" [(ngModel)]="isRootCertificate" (change)="toggleCertificateType()" />
+        <span class="toggle-text">Root Sertifikat</span>
+      </label>
+    </div>
+
+    <form [formGroup]="certificateForm" (ngSubmit)="onSubmit()" class="certificate-form">
+      
+      <!-- Subject Information -->
+      <div class="form-section">
+        <h3 class="section-title">Informacije o subjektu</h3>
+        
+        <div class="form-group">
+          <label for="commonName">Ime (CN) *</label>
+          <input
+            type="text"
+            id="commonName"
+            formControlName="commonName"
+            class="form-control"
+            [class.error]="hasError('commonName')"
+            placeholder="npr. John Doe ili example.com"
+          />
+          <span class="error-message" *ngIf="hasError('commonName')">
+            {{ getErrorMessage('commonName') }}
+          </span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="organization">Organizacija (O) *</label>
+            <input
+              type="text"
+              id="organization"
+              formControlName="organization"
+              class="form-control"
+              [class.error]="hasError('organization')"
+              placeholder="Naziv kompanije"
+            />
+            <span class="error-message" *ngIf="hasError('organization')">
+              {{ getErrorMessage('organization') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="organizationalUnit">Odjeljenje (OU) *</label>
+            <input
+              type="text"
+              id="organizationalUnit"
+              formControlName="organizationalUnit"
+              class="form-control"
+              [class.error]="hasError('organizationalUnit')"
+              placeholder="IT, HR, itd."
+            />
+            <span class="error-message" *ngIf="hasError('organizationalUnit')">
+              {{ getErrorMessage('organizationalUnit') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="country">Država (C) *</label>
+            <input
+              type="text"
+              id="country"
+              formControlName="country"
+              class="form-control"
+              [class.error]="hasError('country')"
+              placeholder="RS"
+              maxlength="2"
+              style="text-transform: uppercase;"
+            />
+            <span class="error-message" *ngIf="hasError('country')">
+              {{ getErrorMessage('country') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input
+              type="email"
+              id="email"
+              formControlName="email"
+              class="form-control"
+              [class.error]="hasError('email')"
+              placeholder="email@primer.com"
+            />
+            <span class="error-message" *ngIf="hasError('email')">
+              {{ getErrorMessage('email') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validity Period -->
+      <div class="form-section">
+        <h3 class="section-title">Period važenja</h3>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="validFrom">Važi od *</label>
+            <input
+              type="datetime-local"
+              id="validFrom"
+              formControlName="validFrom"
+              class="form-control"
+              [class.error]="hasError('validFrom')"
+            />
+            <span class="error-message" *ngIf="hasError('validFrom')">
+              {{ getErrorMessage('validFrom') }}
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="validTo">Važi do *</label>
+            <input
+              type="datetime-local"
+              id="validTo"
+              formControlName="validTo"
+              class="form-control"
+              [class.error]="hasError('validTo')"
+            />
+            <span class="error-message" *ngIf="hasError('validTo')">
+              {{ getErrorMessage('validTo') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Issuer Information (only for non-root certificates) -->
+      <div class="form-section" *ngIf="!isRootCertificate">
+        <h3 class="section-title">Informacije o izdavaču</h3>
+        
+        <div class="form-group">
+          <label for="issuerSerialNumber">Serijski broj izdavača *</label>
+          <input
+            type="text"
+            id="issuerSerialNumber"
+            formControlName="issuerSerialNumber"
+            class="form-control"
+            [class.error]="hasError('issuerSerialNumber')"
+            placeholder="Serijski broj sertifikata koji izdaje ovaj sertifikat"
+          />
+          <span class="error-message" *ngIf="hasError('issuerSerialNumber')">
+            {{ getErrorMessage('issuerSerialNumber') }}
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label for="subjectUserId">ID korisnika (opciono)</label>
+          <input
+            type="text"
+            id="subjectUserId"
+            formControlName="subjectUserId"
+            class="form-control"
+            placeholder="UUID korisnika kome se izdaje sertifikat"
+          />
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="global-error" *ngIf="errorMessage">
+        <p>{{ errorMessage }}</p>
+      </div>
+
+      <div class="success-message" *ngIf="successMessage">
+        <p>{{ successMessage }}</p>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="certificate-button"
+        [disabled]="isLoading"
+      >
+        {{ isLoading ? 'Izdavanje...' : 'Izdaj Sertifikat' }}
+      </button>
+    </form>
+  </div>
+</div>

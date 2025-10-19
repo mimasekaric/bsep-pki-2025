@@ -7,9 +7,14 @@ import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
 import com.bsep.pki.dtos.requests.ChangePasswordDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
+import com.bsep.pki.models.ActiveSession;
+import com.bsep.pki.models.User;
+import com.bsep.pki.models.VerificationToken;
+import com.bsep.pki.services.SessionService;
 import com.bsep.pki.services.VerificationTokenService;
 import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.services.interfaces.IUserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +23,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.security.core.Authentication;
 
 @RestController
@@ -28,12 +35,25 @@ public class AuthController {
 
     private final IAuthService authService;
     private final VerificationTokenService tokenService;
+    private final SessionService sessionService;
     private final IUserService userService;
 
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
-        return authService.login(loginRequest);
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest,  HttpServletRequest request) {
+        ResponseEntity<LoginResponseDTO> loginResponse =  authService.login(loginRequest);
+        if (loginResponse.getStatusCode().is2xxSuccessful() && loginResponse.getBody() != null) {
+            String token = loginResponse.getBody().getAccessToken();
+            String email = loginRequest.getEmail();
+
+            String ipAddress = request.getRemoteAddr();
+            String device = request.getHeader("User-Agent");
+
+            sessionService.deactivateAllCurrentSessionsForUser(email);
+            sessionService.registerSession(token, email, device, ipAddress);
+        }
+
+        return loginResponse;
     }
 
     @PostMapping("/register")
@@ -77,6 +97,32 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(response);
         }
     }
+
+    @GetMapping("/tokens/{email}")
+    public ResponseEntity<?> getActiveSessions(@PathVariable String email) {
+        List<ActiveSession> sessions = sessionService.getSessionsForUser(email);
+        return ResponseEntity.ok(sessions);
+    }
+    @DeleteMapping("/tokensdelete/{email}")
+    public ResponseEntity<Void> revokeAllOtherSessionsForUser(
+            @PathVariable String email,
+            @RequestHeader(name = "Authorization") String authHeader) {
+
+        String currentToken = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            currentToken = authHeader.substring(7);
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+        sessionService.revokeAllOtherSessions(email, currentToken);
+        return ResponseEntity.noContent().build();
+    }
+    @DeleteMapping("/revoke/{token}")
+    public ResponseEntity<Void> revokeSession(@PathVariable String token) {
+        sessionService.revokeSession(token);
+        return ResponseEntity.noContent().build();
+    }
+
 
     @PostMapping("/create-ca-user")
     public ResponseEntity<?> createCAUser(@RequestBody CAUserRegistrationDTO caUserDTO, 
