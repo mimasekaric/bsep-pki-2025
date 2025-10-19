@@ -44,7 +44,7 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<LoginResponseDTO> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO,
+    public ResponseEntity<LoginResponseDTO> changePasswordForCA(@RequestBody ChangePasswordDTO changePasswordDTO,
                                                            Authentication authentication) {
         try {
             String userEmail = authentication.getName();

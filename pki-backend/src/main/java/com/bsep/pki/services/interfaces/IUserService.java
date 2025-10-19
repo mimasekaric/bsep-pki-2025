@@ -16,7 +16,7 @@ public interface IUserService {
     UserResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO);
     User findByEmail(String email);
     List<UserResponseDTO> findUsersByRole(UserRole role);
-    LoginResponseDTO changePassword(ChangePasswordDTO changePasswordDTO, String userEmail);
+    LoginResponseDTO changePasswordForCA(ChangePasswordDTO changePasswordDTO, String userEmail);
     UserResponseDTO createCAUser(CAUserRegistrationDTO caUserDTO, String adminEmail);
 
 

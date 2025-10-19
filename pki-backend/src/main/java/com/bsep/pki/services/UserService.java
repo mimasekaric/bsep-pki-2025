@@ -168,7 +168,7 @@ public  Optional<User> getUserByUsername(String username) {
         emailService.sendEmail(caUser.getEmail(), subject, message);
     }
 
-    public LoginResponseDTO changePassword(ChangePasswordDTO changePasswordDTO, String userEmail) {
+    public LoginResponseDTO changePasswordForCA(ChangePasswordDTO changePasswordDTO, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
