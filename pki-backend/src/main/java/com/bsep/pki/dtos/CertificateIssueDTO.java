@@ -1,6 +1,7 @@
 package com.bsep.pki.dtos;
 
 
+import com.bsep.pki.enums.CertificateType;
 import lombok.Data;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -19,6 +20,7 @@ public class CertificateIssueDTO {
 
     private String issuerSerialNumber;
     private UUID subjectUserId;
+    private CertificateType certificateType;
 
     private List<String> keyUsages;
     private List<String> extendedKeyUsages;

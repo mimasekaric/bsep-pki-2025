@@ -19,6 +19,7 @@ import com.bsep.pki.dtos.CertificateIssueDTO;
 import com.bsep.pki.util.DnParserUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
@@ -116,10 +117,19 @@ public class CertificateService {
         X500Name issuerName = X500Name.getInstance(issuerCertX509.getSubjectX500Principal().getEncoded());
         BigInteger serialNumber = new BigInteger(128, new SecureRandom());
 
-        boolean isCa = subjectUser.getRole() == UserRole.ADMIN || subjectUser.getRole() == UserRole.CA_USER;
+        CertificateType typeToIssue = dto.getCertificateType();
+
+        if (typeToIssue == null || typeToIssue == CertificateType.ROOT) {
+            throw new ValidationException("Invalid or missing certificate type for issuance (must be INTERMEDIATE or END_ENTITY).");
+        }
+
+        // 2. Određujemo da li je novi sertifikat CA sertifikat
+        boolean isCa = typeToIssue == CertificateType.INTERMEDIATE;
+
+        /*
         int keyUsage = isCa ?
                 (KeyUsage.keyCertSign | KeyUsage.cRLSign) :
-                (KeyUsage.digitalSignature | KeyUsage.keyEncipherment);
+                (KeyUsage.digitalSignature | KeyUsage.keyEncipherment);*/
 
         // 3. Kreiranje sertifikata
         X509Certificate newCert = certificateFactory.createCertificate(
