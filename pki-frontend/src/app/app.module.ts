@@ -26,6 +26,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ApproveDialogComponent } from './components/approve-dialog.component.ts/approve-dialog.component.ts.component';
 import { AdminComponent } from './components/admin/admin.component';
 import { ChangePasswordComponent } from './components/change-password/change-password.component';
+import { RejectDialogComponent } from './components/reject-dialog/reject-dialog.component';
 
 
 
@@ -44,7 +45,8 @@ import { ChangePasswordComponent } from './components/change-password/change-pas
     ApproveDialogComponent,
     EmailVerificationComponent,
     AdminComponent,
-    ChangePasswordComponent
+    ChangePasswordComponent,
+    RejectDialogComponent
   ],
   imports: [
     BrowserModule,

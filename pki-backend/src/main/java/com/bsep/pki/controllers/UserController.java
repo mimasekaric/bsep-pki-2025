@@ -48,7 +48,7 @@ public class UserController {
                                                            Authentication authentication) {
         try {
             String userEmail = authentication.getName();
-            LoginResponseDTO response = userService.changePassword(changePasswordDTO, userEmail);
+            LoginResponseDTO response = userService.changePasswordForCA(changePasswordDTO, userEmail);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);

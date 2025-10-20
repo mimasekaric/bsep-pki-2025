@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { CsrService, CsrResponse } from '../../services/csr.service';
 import { ApproveDialogComponent, ApproveDialogResult } from '../approve-dialog.component.ts/approve-dialog.component.ts.component';
+import { RejectDialogComponent, RejectDialogResult } from '../reject-dialog/reject-dialog.component';
 
 @Component({
   selector: 'app-csr-list',
@@ -64,26 +65,28 @@ export class CsrListComponent implements OnInit {
   }
 
   openRejectDialog(csr: CsrResponse): void {
-    // const dialogRef = this.dialog.open(RejectDialogComponent, {
-    //   width: '500px',
-    //   data: { csr },
-    //   disableClose: false,
-    //   autoFocus: true
-    // });
+  const dialogRef = this.dialog.open(RejectDialogComponent, {
+    width: '500px',
+    maxHeight: '90vh',
+    data: { csr },
+    disableClose: false,
+    autoFocus: true,
+    panelClass: 'centered-dialog'
+  });
 
-    // dialogRef.afterClosed().subscribe((result: RejectDialogResult) => {
-    //   if (result && result.rejected && result.reason) {
-    //     const payload = { rejectionReason: result.reason };
-    //     this.csrService.rejectCsr(csr.id, payload).subscribe({
-    //       next: () => {
-    //         alert('CSR uspešno odbijen!');
-    //         this.loadPendingCsrs();
-    //       },
-    //       error: (err) => {
-    //         alert(`Greška: ${err.error?.message || 'Nepoznata greška'}`);
-    //       }
-    //     });
-    //   }
-    // });
+  dialogRef.afterClosed().subscribe((result: RejectDialogResult) => {
+    if (result && result.rejected && result.reason) {
+      const payload = { rejectionReason: result.reason };
+      this.csrService.rejectCsr(csr.id, payload).subscribe({
+        next: () => {
+          alert('CSR uspešno odbijen!');
+          this.loadPendingCsrs();
+        },
+        error: (err) => {
+          alert(`Greška: ${err.error?.message || 'Nepoznata greška'}`);
+        }
+      });
+    }
+  });
   }
 }

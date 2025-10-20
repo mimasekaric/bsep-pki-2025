@@ -25,7 +25,7 @@
             <th scope="col">ID</th>
             <th scope="col">Podnosilac</th>
             <th scope="col">Kreirano</th>
-            <th scope="col">Traženi Izdavalac (SN)</th>
+          
             <th scope="col">Akcije</th>
           </tr>
         </thead>
@@ -34,9 +34,7 @@
             <td><strong>#{{ csr.id }}</strong></td>
             <td>{{ csr.owner.email }}</td>
             <td>{{ csr.createdAt | date:'dd.MM.yyyy. HH:mm' }}</td>
-            <td [title]="csr.caId">
-              {{ csr.caId | slice:0:20 }}...
-            </td>
+          
             <td>
               <button class="btn btn-sm btn-success me-2" (click)="openApproveDialog(csr)">
                 Odobri

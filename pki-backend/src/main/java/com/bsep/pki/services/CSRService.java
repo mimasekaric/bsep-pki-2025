@@ -10,7 +10,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.bouncycastle.asn1.pkcs.Attribute;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
@@ -43,14 +48,11 @@ public class CSRService {
                 .replaceAll("\\s", "");
 
         try {
-            // Dekodiramo čisti Base64 string u niz bajtova
-            byte[] csrBytes = Base64.decode(pemContent);
 
-            // Kreiramo PKCS10CertificationRequest direktno iz bajtova
+            byte[] csrBytes = Base64.decode(pemContent);
             return new PKCS10CertificationRequest(csrBytes);
 
         } catch (Exception e) {
-            // Uhvatimo specifičnu grešku ako dekodiranje ne uspe
             throw new IllegalArgumentException("Invalid CSR PEM format: Failed to decode Base64 content.", e);
         }
     }
@@ -73,9 +75,25 @@ public class CSRService {
             }
         }
 
+        X500Name subjectName = csr.getSubject();
         // da li ima podataka o subjektu
         if (csr.getSubject().getRDNs().length == 0) {
             throw new IllegalArgumentException("CSR subject data is empty.");
+        }
+        if (subjectName.getRDNs(BCStyle.CN).length == 0) {
+            throw new IllegalArgumentException("CSR validation failed: Common Name (CN) is required.");
+        }
+        if (subjectName.getRDNs(BCStyle.O).length == 0) {
+            throw new IllegalArgumentException("CSR validation failed: Organization (O) is required.");
+        }
+        if (subjectName.getRDNs(BCStyle.OU).length == 0) {
+            throw new IllegalArgumentException("CSR validation failed: Organizational Unit (OU) is required.");
+        }
+        if (subjectName.getRDNs(BCStyle.C).length == 0) {
+            throw new IllegalArgumentException("CSR validation failed: Country (C) is required.");
+        }
+        if (subjectName.getRDNs(BCStyle.EmailAddress).length == 0) {
+            throw new IllegalArgumentException("CSR validation failed: Email Address is required.");
         }
     }
 
@@ -83,6 +101,10 @@ public class CSRService {
     public CSR submitCsr(CSRRequestDTO dto, String ownerEmail) {
         User owner = userRepository.findByEmail(ownerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + ownerEmail));
+
+        if(owner.getRole()!=UserRole.ORDINARY_USER){
+            throw new SecurityException("Only ordinary users can request csr via this method.");
+        }
 
         User approver = userRepository.findById(dto.getApproverId())
                 .orElseThrow(() -> new ResourceNotFoundException("Approver not found: " + dto.getApproverId()));
@@ -150,6 +172,40 @@ public class CSRService {
         csr.setStatus(CSR.CsrStatus.REJECTED);
         csr.setRejectionReason(reason);
         return csrRepository.save(csr);
+    }
+
+
+    public void validateCsrExtensions(Extensions requestedExtensions, User owner) {
+        if (requestedExtensions == null) {
+            return;
+        }
+
+        UserRole userRole = owner.getRole();
+
+        if (userRole != UserRole.ORDINARY_USER) {
+
+            throw new SecurityException("Only ordinary users can submit CSRs via this method.");
+        }
+
+
+        Extension bcExtension = requestedExtensions.getExtension(Extension.basicConstraints);
+        if (bcExtension != null) {
+            BasicConstraints bc = BasicConstraints.getInstance(bcExtension.getParsedValue());
+            if (bc.isCA()) {
+                throw new SecurityException("CSR validation failed: End-entity user cannot request to be a CA.");
+            }
+        }
+
+        Extension kuExtension = requestedExtensions.getExtension(Extension.keyUsage);
+        if (kuExtension != null) {
+            KeyUsage ku = KeyUsage.getInstance(kuExtension.getParsedValue());
+            if (ku.hasUsages(KeyUsage.keyCertSign) || ku.hasUsages(KeyUsage.cRLSign)) {
+                throw new SecurityException("CSR validation failed: End-entity user cannot request keyCertSign or cRLSign.");
+            }
+        }
+
+        // TODO: Dodati za ExtendedKeyUsage i SANs.
+
     }
 
 

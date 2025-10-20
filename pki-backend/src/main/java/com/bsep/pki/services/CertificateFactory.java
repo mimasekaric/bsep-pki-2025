@@ -103,6 +103,17 @@ public class CertificateFactory {
                 case "DECIPHER_ONLY": keyUsageBits |= KeyUsage.decipherOnly; break;
             }
         }
+
+//        if (isCa) {
+//            keyUsageBits |= KeyUsage.keyCertSign;
+//            keyUsageBits |= KeyUsage.cRLSign;
+//        }
+//
+//        // Ako je i dalje 0 (npr. EE bez poslatih usages), postavite default
+//        if(keyUsageBits == 0) {
+//            keyUsageBits = KeyUsage.digitalSignature | KeyUsage.keyEncipherment;
+//        }
+
         certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(keyUsageBits));
     }
 

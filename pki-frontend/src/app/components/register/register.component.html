@@ -57,18 +57,18 @@
         </div>
   
         <div class="form-group">
-          <label for="organization">Organizacija</label>
+          <label for="organisation">Organizacija</label>
           <input 
             type="text" 
-            id="organization" 
-            formControlName="organization"
+            id="organisation" 
+            formControlName="organisation"
             class="form-control"
-            [class.error]="registerForm.get('organization')?.invalid && registerForm.get('organization')?.touched"
+            [class.error]="registerForm.get('organisation')?.invalid && registerForm.get('organisation')?.touched"
             placeholder="Naziv organizacije"
           >
-          <div *ngIf="registerForm.get('organization')?.invalid && registerForm.get('organization')?.touched" class="error-message">
-            <span *ngIf="registerForm.get('organization')?.errors?.['required']">Organizacija je obavezna</span>
-            <span *ngIf="registerForm.get('organization')?.errors?.['minlength']">Organizacija mora imati najmanje 2 karaktera</span>
+          <div *ngIf="registerForm.get('organisation')?.invalid && registerForm.get('organisation')?.touched" class="error-message">
+            <span *ngIf="registerForm.get('organisation')?.errors?.['required']">Organizacija je obavezna</span>
+            <span *ngIf="registerForm.get('organisation')?.errors?.['minlength']">Organizacija mora imati najmanje 2 karaktera</span>
           </div>
         </div>
   
