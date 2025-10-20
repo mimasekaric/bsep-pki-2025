@@ -5,6 +5,9 @@ import { CertificateService, IssuerDto } from '../../services/certificate.servic
 import { AuthService } from 'src/app/services/auth.service';
 import { Subscription } from 'rxjs';
 
+// Definišemo Enum (ili tip) za CertificateType
+type CertificateType = 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY';
+
 @Component({
   selector: 'app-issue-certificate',
   templateUrl: './issue-certificate.component.html',
@@ -201,6 +204,24 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
         const formValue = this.certificateForm.getRawValue();
         const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
 
+        // =================================================================
+        // ==== NOVA LOGIKA ZA ODREĐIVANJE TIPA SERTIFIKATA ================
+        // =================================================================
+        let certificateType: CertificateType;
+        const isCaSelected = formValue.basicConstraints.isCa;
+
+        if (this.isRootCertificate) {
+          certificateType = 'ROOT';
+        } else if (isCaSelected) {
+          // Ako nije Root I izabrano je "Ovo je CA sertifikat"
+          certificateType = 'INTERMEDIATE';
+        } else {
+          // Ako nije Root I NIJE izabrano "Ovo je CA sertifikat"
+          certificateType = 'END_ENTITY';
+        }
+        // =================================================================
+
+
         const certificateDto = {
           commonName: formValue.commonName,
           organization: formValue.organization,
@@ -212,6 +233,9 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           issuerSerialNumber: this.isRootCertificate ? null : formValue.issuerSerialNumber,
           
           subjectUserId: subjectUserIdToSend,
+
+          // NOVO: Dodavanje polja u DTO koje očekuje BE
+          certificateType: certificateType, 
           
           keyUsages: Object.keys(formValue.keyUsage).filter(key => formValue.keyUsage[key]).map(key => toSnakeCase(key)),
           extendedKeyUsages: Object.keys(formValue.extendedKeyUsage).filter(key => formValue.extendedKeyUsage[key]).map(key => toSnakeCase(key)),
