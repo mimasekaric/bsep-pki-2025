@@ -5,6 +5,7 @@ import com.bsep.pki.dtos.requests.LoginRequestDTO;
 import com.bsep.pki.dtos.requests.ResetPasswordRequest;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
+import com.bsep.pki.dtos.responses.UserIdResponseDTO;
 import com.bsep.pki.exceptions.InvalidTokenException;
 import com.bsep.pki.services.PasswordResetService;
 import com.bsep.pki.services.VerificationTokenService;
@@ -19,7 +20,11 @@ import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.services.interfaces.IUserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +40,8 @@ public class AuthController {
     private final VerificationTokenService tokenService;
     private final PasswordResetService passwordResetService;
     private final SessionService sessionService;
+    private final JwtDecoder jwtDecoder;
+    private final IUserService userService;
 
 
     @PostMapping("/login")
@@ -131,10 +138,41 @@ public class AuthController {
         sessionService.revokeAllOtherSessions(email, currentToken);
         return ResponseEntity.noContent().build();
     }
+
     @DeleteMapping("/revoke/{token}")
     public ResponseEntity<Void> revokeSession(@PathVariable String token) {
         sessionService.revokeSession(token);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserIdResponseDTO> getCurrentUserId(@RequestHeader(name = "Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            Jwt decodedJwt = this.jwtDecoder.decode(token);
+
+            String email = decodedJwt.getSubject();
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            User user = userService.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            UserIdResponseDTO response = new UserIdResponseDTO(user.getId());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
 }

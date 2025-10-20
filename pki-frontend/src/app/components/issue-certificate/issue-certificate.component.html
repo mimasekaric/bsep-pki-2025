@@ -124,11 +124,6 @@
               Ovo je CA sertifikat (može da potpisuje druge sertifikate)
             </label>
           </div>
-          <div class="form-group" *ngIf="certificateForm.get('basicConstraints.isCa')?.value">
-            <label for="pathLen">Maksimalna dubina lanca (Path Length Constraint)</label>
-            <input type="number" id="pathLen" formControlName="pathLen" class="form-control" min="0" placeholder="0 ili više"/>
-            <small class="form-hint">Koliko CA sertifikata može biti ispod ovog u lancu.</small>
-          </div>
         </div>
 
         <!-- Podsekcija: Key Usage -->

@@ -46,11 +46,6 @@ public class CertificateController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
-
-
-
-
-
         /*try {
 
             String uuidString = "b667ae38-86aa-4004-b3d5-ddb3fbe50667";
@@ -63,6 +58,7 @@ public class CertificateController {
     }
 
     @PostMapping("/issue")
+    //@PreAuthorize("hasAnyAuthority('ADMIN', 'CA_USER', 'ORDINARY_USER')")
     public ResponseEntity<?> issueCertificate(@RequestBody CertificateIssueDTO dto) {
         try {
             Object result = certificateService.issueCertificate(dto);

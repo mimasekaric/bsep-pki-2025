@@ -175,4 +175,8 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/reset-password`, requestBody, { responseType: 'text' });
   }
 
+  fetchCurrentUserId(): Observable<{ id: number }> {
+    return this.http.get<{ id: number }>(`${this.apiUrl}/me`);
+  }
+
 }

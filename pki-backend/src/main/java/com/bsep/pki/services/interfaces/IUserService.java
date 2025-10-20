@@ -11,5 +11,4 @@ public interface IUserService {
     UserResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO);
     User findByEmail(String email);
 
-
 }
