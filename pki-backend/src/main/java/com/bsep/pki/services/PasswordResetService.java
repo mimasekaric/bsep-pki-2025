@@ -6,6 +6,7 @@ import com.bsep.pki.exceptions.InvalidTokenException;
 import com.bsep.pki.models.PasswordResetToken;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
+import com.bsep.pki.util.AuditLog;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,19 +31,13 @@ public class PasswordResetService {
         this.eventPublisher = eventPublisher;
     }
 
-    /**
-     * Pronalazi korisnika po emailu i, ako postoji, pokreće događaj za slanje email-a.
-     * Ne "baca" izuzetak ako korisnik ne postoji iz bezbednosnih razloga.
-     */
+    @AuditLog(action = "START_PASSWORD_RESET")
     public void initiatePasswordReset(String email) {
         userRepository.findByEmail(email)
                 .ifPresent(user -> eventPublisher.publishEvent(new OnPasswordResetRequestEvent(user)));
     }
 
-    /**
-     * Validira token i postavlja novu lozinku za korisnika.
-     * "Baca" izuzetke ako token nije validan ili je istekao.
-     */
+    @AuditLog(action = "FINALIZE_PASSWORD_RESET")
     public void finalizePasswordReset(String token, String newPassword) {
         PasswordResetToken resetToken = tokenService.findByToken(token)
                 .orElseThrow(() -> new InvalidTokenException("Token je nevažeći."));
@@ -56,7 +51,6 @@ public class PasswordResetService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // Obavezno obriši token nakon uspešne upotrebe
         tokenService.deleteToken(resetToken);
     }
 }

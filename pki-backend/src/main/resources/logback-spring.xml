@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Definicija promenljive za lokaciju logova -->
+    <property name="LOG_PATH" value="logs"/>
+
+    <!-- Appender za konzolu (korisno za razvoj) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!--
+                KORISTIMO JEDNOSTAVNU SINTAKSU BEZ NAVOĐENJA PUNIH KLASA.
+                OVO JE PREPORUČEN NAČIN.
+            -->
+            <timestamp>
+                <timeZone>UTC</timeZone>
+            </timestamp>
+            <logLevel/>
+            <loggerName/>
+            <threadName/>
+            <message/>
+            <stackTrace/>
+            <mdc/> <!-- Ovo će automatski dodati sve iz MDC-a (traceId, action, itd.) -->
+        </encoder>
+    </appender>
+
+    <!-- Appender za fajl sa rotacijom (za produkciju) -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/pki-system.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/pki-system.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!--
+               I OVDE KORISTIMO JEDNOSTAVNU SINTAKSU.
+           -->
+            <timestamp>
+                <timeZone>UTC</timeZone>
+            </timestamp>
+            <logLevel/>
+            <loggerName/>
+            <threadName/>
+            <message/>
+            <stackTrace/>
+            <mdc/>
+        </encoder>
+    </appender>
+
+    <!-- Definišemo nivo logovanja za našu aplikaciju -->
+    <logger name="com.bsep" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <!-- Definišemo nivo logovanja za Spring framework -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>

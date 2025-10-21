@@ -6,6 +6,7 @@ import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.services.interfaces.IUserService;
+import com.bsep.pki.util.AuditLog;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,7 @@ public class AuthService implements IAuthService {
     }
 
     @Override
+    @AuditLog(action = "TRIED_LOGIN")
     public ResponseEntity<LoginResponseDTO> login(LoginRequestDTO loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
@@ -69,6 +71,7 @@ public class AuthService implements IAuthService {
     }
 
     @Override
+    @AuditLog(action = "TRIED_REGISTER")
     public ResponseEntity<UserResponseDTO> register(UserRegistrationDTO dto) {
         UserResponseDTO user = userService.registerUser(dto);
         return new ResponseEntity<>(user, HttpStatus.CREATED);

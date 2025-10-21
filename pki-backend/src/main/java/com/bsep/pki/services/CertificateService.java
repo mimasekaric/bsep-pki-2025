@@ -16,6 +16,7 @@ import com.bsep.pki.repositories.CertificateRepository;
 import com.bsep.pki.repositories.KeystoreRepository;
 import com.bsep.pki.repositories.UserRepository;
 import com.bsep.pki.dtos.CertificateIssueDTO;
+import com.bsep.pki.util.AuditLog;
 import com.bsep.pki.util.DnParserUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -60,6 +61,7 @@ public class CertificateService {
     private final CertificateTemplateService templateService;
 
     @Transactional
+    @AuditLog(action = "ISSUE_ROOT_CERTIFICATE")
     public Certificate issueRootCertificate(UUID adminId, CertificateIssueDTO dto) throws Exception {
         User admin = userRepository.findById(adminId).orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
         if (admin.getRole() != UserRole.ADMIN) {
@@ -91,6 +93,7 @@ public class CertificateService {
     }
 
     @Transactional
+    @AuditLog(action = "ISSUE_CERTIFICATE")
     public Object issueCertificate(CertificateIssueDTO dto) throws Exception {
         if (dto.getTemplateId() != null) {
             System.out.println("Template ID provided: " + dto.getTemplateId() + ". Applying template logic.");
@@ -406,6 +409,7 @@ public class CertificateService {
     }
 
     @Transactional
+    @AuditLog(action = "REVOKE_CERTIFICATE")
     public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) throws Exception {
         Certificate certToRevoke = certificateRepository.findBySerialNumber(serialNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Certificate not found"));
@@ -513,6 +517,7 @@ public class CertificateService {
         return new CertificateDetailsDTO(certEntity);
     }
 
+    @AuditLog(action = "POTENTIAL_ISSUERS")
     public List<IssuerDto> getPotentialIssuers() {
         try {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -521,19 +526,13 @@ public class CertificateService {
                 return Collections.emptyList();
             }
 
-            // ==========================================================
-            // ==== KONAČNO ISPRAVNO REŠENJE ============================
-            // ==========================================================
             String email;
             if (principal instanceof Jwt) {
-                // Ako je Principal Jwt objekat, uzimamo 'subject' claim iz njega.
                 Jwt jwt = (Jwt) principal;
                 email = jwt.getSubject();
             } else {
-                // Fallback za druge konfiguracije (iako se kod Vas neće desiti)
                 throw new IllegalStateException("Principal nije očekivanog tipa (Jwt). Tip je: " + principal.getClass().getName());
             }
-            // ==========================================================
 
             if (email == null || email.isBlank()) {
                 throw new IllegalStateException("Email (subject) u JWT tokenu je prazan ili ne postoji.");

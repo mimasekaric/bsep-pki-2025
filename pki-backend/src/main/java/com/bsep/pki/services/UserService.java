@@ -23,7 +23,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
-
+import com.bsep.pki.util.AuditLog;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +41,7 @@ public class UserService implements IUserService, UserDetailsService {
 
     @Override
     @Transactional
+    @AuditLog(action = "USER_REGISTER_ATTEMPT")
     public UserResponseDTO registerUser(UserRegistrationDTO userRegistrationDTO) {
         Optional<User> existingUser = userRepository.findByEmail(userRegistrationDTO.getEmail());
 
@@ -97,6 +98,7 @@ public  Optional<User> getUserByUsername(String username) {
 
 
     @Override
+    @AuditLog(action = "USER_POTENTIAL_SUBJECTS")
     public List<User> findPotentialCertificateSubjects() {
         log.info(">>> Pokrenuta metoda findPotentialCertificateSubjects.");
 
