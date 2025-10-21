@@ -28,6 +28,13 @@ export interface CertificateDetailsDTO {
   revoked: boolean;
 }
 
+export interface IssuerDto {
+  serialNumber: string;
+  commonName: string;
+  validFrom: string;
+  validTo: string;
+}
+
 export interface CertificateWithPrivateKeyDTO {
   certificate: CertificateDetailsDTO;
   privateKeyPem: string;
@@ -47,6 +54,10 @@ export class CertificateService {
 
   issueCertificate(certificateData: CertificateIssueDTO): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/issue`, certificateData);
+  }
+
+  getAvailableIssuers(): Observable<IssuerDto[]> {
+    return this.http.get<IssuerDto[]>(`${this.apiUrl}/issuers`);
   }
 
     getMyCaCertificates(): Observable<CertificateDetailsDTO[]> {

@@ -1,6 +1,7 @@
 package com.bsep.pki.controllers;
 
 
+import com.bsep.pki.dtos.IssuerDto;
 import com.bsep.pki.models.Certificate;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -44,11 +46,6 @@ public class CertificateController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
-
-
-
-
-
         /*try {
 
             String uuidString = "b667ae38-86aa-4004-b3d5-ddb3fbe50667";
@@ -61,6 +58,7 @@ public class CertificateController {
     }
 
     @PostMapping("/issue")
+    //@PreAuthorize("hasAnyAuthority('ADMIN', 'CA_USER', 'ORDINARY_USER')")
     public ResponseEntity<?> issueCertificate(@RequestBody CertificateIssueDTO dto) {
         try {
             Object result = certificateService.issueCertificate(dto);
@@ -91,6 +89,13 @@ public class CertificateController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);
         }
+    }
+
+    @GetMapping("/issuers")
+    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA', 'ROLE_USER')")
+    public ResponseEntity<List<IssuerDto>> getAvailableIssuers() {
+        List<IssuerDto> issuers = certificateService.getPotentialIssuers();
+        return ResponseEntity.ok(issuers);
     }
 
     @GetMapping("/ca")

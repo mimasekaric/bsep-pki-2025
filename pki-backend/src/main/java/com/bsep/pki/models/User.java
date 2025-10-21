@@ -4,6 +4,7 @@ import com.bsep.pki.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Getter
 @Table(name="users")
 public class User {
 
@@ -38,4 +40,11 @@ public class User {
 
     private String verificationToken;
 
+    public String getOrganisation() {
+        return organisation;
+    }
+
+    public String getRoleAsString() {
+        return role.toString();
+    }
 }

@@ -1,25 +1,104 @@
-import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CertificateService } from '../../services/certificate.service';
+import { CertificateService, IssuerDto } from '../../services/certificate.service';
+import { AuthService, User } from 'src/app/services/auth.service';
+import { Subscription } from 'rxjs';
+
+// Definišemo Enum (ili tip) za CertificateType
+type CertificateType = 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY';
 
 @Component({
   selector: 'app-issue-certificate',
   templateUrl: './issue-certificate.component.html',
   styleUrls: ['./issue-certificate.component.css']
 })
-export class IssueCertificateComponent {
+export class IssueCertificateComponent implements OnInit, OnDestroy {
   certificateForm: FormGroup;
   isLoading = false;
   errorMessage = '';
   successMessage = '';
   isRootCertificate = false;
 
+  availableIssuers: IssuerDto[] = []; 
+
+  issuerValidFrom: string = '';
+  issuerValidTo: string = '';
+  issuerValidFromDate: Date | null = null;
+  issuerValidToDate: Date | null = null;
+  isCaUser = false;
+
+  private currentUserId: number | null = null;
+  private userSubscription: Subscription;
+
   constructor(
     private fb: FormBuilder,
     private certificateService: CertificateService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
+    this.certificateForm = this.fb.group({});
+    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+      if (user && user.id) {
+        this.currentUserId = user.id;
+        console.log('ID ulogovanog korisnika je uspešno učitan:', this.currentUserId);
+      } else {
+        console.log('Korisnik trenutno nije ulogovan ili podaci nisu dostupni.');
+        this.currentUserId = null;
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    if (this.userSubscription) {
+      this.userSubscription.unsubscribe();
+    }
+  }
+
+  ngOnInit(): void {
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (currentUser) {
+        const roleValue = currentUser.role || 'NEMA ULOGE';
+        console.log("NGONINIT: Ulogovani korisnik pronađen. ID:", currentUser.id, "Uloga:", roleValue);
+    } else {
+        console.log("NGONINIT: Nema ulogovanog korisnika.");
+    }
+    
+    if (!currentUser) {
+        this.router.navigate(['/login']); 
+        return;
+    }
+
+    const userRole = currentUser.role;
+
+    if (userRole === 'ROLE_ORDINARY_USER') {
+      console.log("NGONINIT: Korisnik je ORDINARY_USER, preusmeravanje.");
+      alert("Kao običan korisnik ne možete pristupati stranici za izdavanje sertifikata."); 
+      this.router.navigate(['/']); 
+      return;
+    }
+
+    else if (userRole === 'ROLE_CA_USER') { 
+      this.isCaUser = true;
+      console.log("NGONINIT: Korisnik je CA_USER. isCaUser postavljeno na TRUE.");
+    }
+    
+    else if (userRole === 'ROLE_ADMIN') { 
+      console.log("NGONINIT: Korisnik je ADMIN.");
+    }
+    
+    else {
+      console.error("NGONINIT: Pronađena nepoznata uloga:", userRole);
+    }
+    
+
+    this.initForm();
+    this.loadIssuers(); 
+  }
+
+
+  initForm(): void {
     this.certificateForm = this.fb.group({
       commonName: ['', [Validators.required]],
       organization: ['', [Validators.required]],
@@ -28,90 +107,219 @@ export class IssueCertificateComponent {
       email: ['', [Validators.required, Validators.email]],
       validFrom: ['', [Validators.required]],
       validTo: ['', [Validators.required]],
-      issuerSerialNumber: [''],
-      subjectUserId: ['']
+      issuerSerialNumber: [null],
+      basicConstraints: this.fb.group({
+        isCa: [false],
+        pathLen: [{ value: null, disabled: true }]
+      }),
+      keyUsage: this.fb.group({
+        digitalSignature: [false], nonRepudiation: [false], keyEncipherment: [false],
+        dataEncipherment: [false], keyAgreement: [false], keyCertSign: [false], crlSign: [false]
+      }),
+      extendedKeyUsage: this.fb.group({
+        serverAuth: [false], clientAuth: [false], codeSigning: [false],
+        emailProtection: [false], timeStamping: [false]
+      }),
+      subjectAlternativeNames: this.fb.array([])
     });
 
-    // Set default dates
     const now = new Date();
     const oneYearLater = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    
     this.certificateForm.patchValue({
       validFrom: this.formatDateForInput(now),
       validTo: this.formatDateForInput(oneYearLater)
     });
+
+    this.certificateForm.get('basicConstraints.isCa')?.valueChanges.subscribe(isCa => {
+      const pathLenControl = this.certificateForm.get('basicConstraints.pathLen');
+      isCa ? pathLenControl?.enable() : pathLenControl?.disable();
+      if (!isCa) pathLenControl?.reset();
+    });
+  }
+
+  loadIssuers(): void {
+    this.isLoading = true;
+    this.certificateService.getAvailableIssuers().subscribe({
+      next: (issuers) => {
+        this.availableIssuers = issuers;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        this.errorMessage = 'Greška pri učitavanju liste izdavaoca.';
+        this.isLoading = false;
+        console.error(err);
+      }
+    });
+  }
+
+  onIssuerChange(event: any): void {
+    const selectedSerial = event.target.value;
+    const selectedIssuer = this.availableIssuers.find(i => i.serialNumber == selectedSerial);
+
+    if (selectedIssuer) {
+      const validFrom = new Date(selectedIssuer.validFrom);
+      const validTo = new Date(selectedIssuer.validTo);
+      
+      this.issuerValidFrom = this.formatDateForInput(validFrom);
+      this.issuerValidTo = this.formatDateForInput(validTo);
+      this.issuerValidFromDate = validFrom;
+      this.issuerValidToDate = validTo;
+      
+      this.certificateForm.get('validFrom')?.reset();
+      this.certificateForm.get('validTo')?.reset();
+    } else {
+      this.issuerValidFrom = '';
+      this.issuerValidTo = '';
+      this.issuerValidFromDate = null;
+      this.issuerValidToDate = null;
+    }
   }
 
   formatDateForInput(date: Date): string {
-    return date.toISOString().slice(0, 16);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
-  toggleCertificateType() {
-    this.isRootCertificate = !this.isRootCertificate;
+  toggleCertificateType(): void {
+    console.log("toggleCertificateType: isRootCertificate pre promene:", !this.isRootCertificate);
+    console.log("toggleCertificateType: isCaUser status:", this.isCaUser);
+    
+    if (this.isRootCertificate && this.isCaUser) {
+        this.isRootCertificate = false; 
+        alert("Kao CA korisnik nemate dozvolu za izdavanje Root sertifikata.");
+        console.log("toggleCertificateType: Blokirana Root opcija za CA_USER.");
+    }
+
+    const issuerControl = this.certificateForm.get('issuerSerialNumber');
     if (this.isRootCertificate) {
-      this.certificateForm.get('issuerSerialNumber')?.clearValidators();
-      this.certificateForm.get('issuerSerialNumber')?.setValue('');
+      console.log("toggleCertificateType: Postavljanje forme za Root sertifikat (Issuer: null).");
+      issuerControl?.clearValidators();
+      issuerControl?.setValue(null);
     } else {
-      this.certificateForm.get('issuerSerialNumber')?.setValidators([Validators.required]);
+      console.log("toggleCertificateType: Postavljanje forme za Intermediate/EE sertifikat (Issuer: obavezan).");
+      issuerControl?.setValidators([Validators.required]);
     }
-    this.certificateForm.get('issuerSerialNumber')?.updateValueAndValidity();
+    issuerControl?.updateValueAndValidity();
+    
+    this.issuerValidFrom = '';
+    this.issuerValidTo = '';
+    this.issuerValidFromDate = null;
+    this.issuerValidToDate = null;
   }
 
-  onSubmit() {
-    if (this.certificateForm.valid) {
-      this.isLoading = true;
-      this.errorMessage = '';
-      this.successMessage = '';
+  get sanControls() {
+    return this.certificateForm.get('subjectAlternativeNames') as FormArray;
+  }
 
-      const formData = { ...this.certificateForm.value };
+  addSan(): void {
+    const sanGroup = this.fb.group({
+      type: ['DNS', Validators.required],
+      value: ['', Validators.required]
+    });
+    this.sanControls.push(sanGroup);
+  }
+
+  removeSan(index: number): void {
+    this.sanControls.removeAt(index);
+  }
+
+  onSubmit(): void {
+    if (this.certificateForm.invalid) {
+      this.certificateForm.markAllAsTouched();
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    this.authService.fetchCurrentUserId().subscribe({
       
-      // Convert dates to ISO format
-      formData.validFrom = new Date(formData.validFrom).toISOString();
-      formData.validTo = new Date(formData.validTo).toISOString();
-
-      // Remove empty optional fields
-      if (!formData.issuerSerialNumber) {
-        delete formData.issuerSerialNumber;
-      }
-      if (!formData.subjectUserId) {
-        delete formData.subjectUserId;
-      }
-
-      const request = this.isRootCertificate
-        ? this.certificateService.issueRootCertificate(formData)
-        : this.certificateService.issueCertificate(formData);
-
-      request.subscribe({
-        next: (response) => {
-          console.log('Certificate issued successfully:', response);
-          this.successMessage = 'Sertifikat je uspešno izdat!';
+      next: (userWithId) => {
+        
+        if (!userWithId || !userWithId.id) {
+          this.errorMessage = "ID korisnika nije pronađen na serveru. Izdavanje je prekinuto.";
           this.isLoading = false;
-          
-          // Reset form after 2 seconds
-          setTimeout(() => {
-            this.certificateForm.reset();
-            this.successMessage = '';
-            const now = new Date();
-            const oneYearLater = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-            this.certificateForm.patchValue({
-              validFrom: this.formatDateForInput(now),
-              validTo: this.formatDateForInput(oneYearLater)
-            });
-          }, 2000);
-        },
-        error: (error) => {
-          console.error('Certificate issuance error:', error);
-          this.errorMessage = error.error?.message || error.error || 'Greška pri izdavanju sertifikata';
-          this.isLoading = false;
+          console.error("KRITIČNA GREŠKA: Odgovor sa /api/users/me je neispravan.", userWithId);
+          return;
         }
-      });
-    } else {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.certificateForm.controls).forEach(key => {
-        this.certificateForm.get(key)?.markAsTouched();
-      });
-    }
-  }
+
+        console.log(`Dobijen je ispravan ID sa servera: ${userWithId.id}`);
+        const subjectUserIdToSend = userWithId.id.toString();
+
+        const formValue = this.certificateForm.getRawValue();
+        const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
+
+        let certificateType: CertificateType;
+        const isCaSelected = formValue.basicConstraints.isCa;
+
+        if (this.isRootCertificate) {
+          certificateType = 'ROOT';
+        } else if (isCaSelected) {
+          certificateType = 'INTERMEDIATE';
+        } else {
+          certificateType = 'END_ENTITY';
+        }
+
+
+        const certificateDto = {
+          commonName: formValue.commonName,
+          organization: formValue.organization,
+          organizationalUnit: formValue.organizationalUnit,
+          country: formValue.country,
+          email: formValue.email,
+          validFrom: new Date(formValue.validFrom).toISOString(),
+          validTo: new Date(formValue.validTo).toISOString(),
+          issuerSerialNumber: this.isRootCertificate ? null : formValue.issuerSerialNumber,
+          
+          subjectUserId: subjectUserIdToSend,
+
+          certificateType: certificateType, 
+          
+          keyUsages: Object.keys(formValue.keyUsage).filter(key => formValue.keyUsage[key]).map(key => toSnakeCase(key)),
+          extendedKeyUsages: Object.keys(formValue.extendedKeyUsage).filter(key => formValue.extendedKeyUsage[key]).map(key => toSnakeCase(key)),
+          subjectAlternativeNames: formValue.subjectAlternativeNames.map(
+            (san: { type: string; value: string }) => `${san.type.toLowerCase()}:${san.value}`
+          ),
+        };
+        
+        console.log("FINALNI DTO koji se šalje na backend:", JSON.stringify(certificateDto, null, 2));
+
+        const request = this.isRootCertificate
+          ? this.certificateService.issueRootCertificate(certificateDto)
+          : this.certificateService.issueCertificate(certificateDto);
+
+        request.subscribe({
+          next: (response) => {
+            this.successMessage = 'Sertifikat je uspešno izdat!';
+            this.isLoading = false;
+            
+            setTimeout(() => {
+              this.successMessage = '';
+              this.isRootCertificate = false;
+              this.initForm(); 
+              this.loadIssuers();
+            }, 2500);
+          },
+          error: (error) => {
+            this.errorMessage = error.error?.message || error.error || 'Došlo je do neočekivane greške.';
+            this.isLoading = false;
+            console.error('Greška pri izdavanju sertifikata:', error);
+          }
+        });
+      },
+
+      error: (err) => {
+        this.errorMessage = "Greška pri dobavljanju podataka o korisniku. Proverite da li ste ulogovani.";
+        this.isLoading = false;
+        console.error('Greška pri pozivu fetchCurrentUserId:', err);
+      }
+    });
+}
 
   hasError(fieldName: string): boolean {
     const field = this.certificateForm.get(fieldName);

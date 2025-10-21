@@ -18,6 +18,15 @@ export interface RegisterRequest {
   organisation: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   email: string;
@@ -172,6 +181,21 @@ export class AuthService {
   getToken(): string | null {
     return localStorage.getItem('jwt_token');
   }
+
+  forgotPassword(email: string): Observable<void> {
+    const requestBody: ForgotPasswordRequest = { email };
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`, requestBody);
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<string> {
+    const requestBody: ResetPasswordRequest = { token, newPassword };
+    return this.http.post(`${this.apiUrl}/reset-password`, requestBody, { responseType: 'text' });
+  }
+
+  fetchCurrentUserId(): Observable<{ id: number }> {
+    return this.http.get<{ id: number }>(`${this.apiUrl}/me`);
+  }
+
 
   processLoginResponse(response: AuthResponse): void {
   this.setToken(response.accessToken);

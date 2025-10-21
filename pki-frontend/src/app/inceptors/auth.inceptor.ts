@@ -20,22 +20,47 @@ export class AuthInterceptor implements HttpInterceptor {
   ) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    
+    // ==========================================================
+    // ==== NOVI DEO: DODAVANJE TOKENA U ODLAZNI ZAHTEV =========
+    // ==========================================================
+    
+    // 1. Uzmi token iz AuthService-a (koji ga čita iz localStorage)
+    const token = this.authService.getToken();
+    let authReq = request; // Po defaultu, zahtev ostaje nepromenjen
 
-    return next.handle(request).pipe(
+    // 2. Ako token postoji, kloniraj zahtev i dodaj mu Authorization header
+    if (token) {
+      authReq = request.clone({
+        headers: request.headers.set('Authorization', `Bearer ${token}`)
+      });
+      console.log('AuthInterceptor: Token found, adding Authorization header.');
+    } else {
+      console.warn('AuthInterceptor: No token found. Sending request without token.');
+    }
+    
+    // ==========================================================
+    // ==== VAŠ POSTOJEĆI DEO: RUKOVANJE GREŠKAMA ===============
+    // ==========================================================
+
+    // 3. Prosledi novi (ili stari) zahtev dalje i uhvati potencijalne greške
+    return next.handle(authReq).pipe(
       catchError((error: HttpErrorResponse) => {
+        // 4. Ako server vrati 401, to znači da je token nevalidan ili istekao
         if (error.status === 401) {
-          console.warn('Authentication expired or invalid. Redirecting to login.');
+          console.error('AuthInterceptor: Received 401 Unauthorized. Token is invalid or expired.');
 
+          // Uradi logout da se obriše nevalidan token
           this.authService.logout(); 
          
+          // Preusmeri korisnika na login stranicu
           this.router.navigate(['/login']); 
 
-          // 3. Obavezno vrati Observable sa greškom da bi se lanac obrade grešaka nastavio
-          // (npr. ako neka komponenta sluša specifičnu grešku).
+          // Vrati novu grešku da bi se lanac prekinuo
           return throwError(() => new Error('Session expired or unauthorized.'));
         }
 
-        // Za sve ostale greške koje nisu 401, samo ih prosledi dalje
+        // 5. Za sve ostale greške (403, 404, 500...), samo ih prosledi dalje
         return throwError(() => error);
       })
     );

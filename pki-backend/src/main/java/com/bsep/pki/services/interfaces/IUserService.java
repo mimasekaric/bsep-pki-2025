@@ -19,5 +19,4 @@ public interface IUserService {
     LoginResponseDTO changePasswordForCA(ChangePasswordDTO changePasswordDTO, String userEmail);
     UserResponseDTO createCAUser(CAUserRegistrationDTO caUserDTO, String adminEmail);
 
-
 }
