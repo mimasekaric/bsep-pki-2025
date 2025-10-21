@@ -545,23 +545,7 @@ public class CertificateService {
             User user = userRepository.findByEmail(cleanedEmail)
                     .orElseThrow(() -> new IllegalStateException("Ulogovani korisnik sa emailom '" + cleanedEmail + "' nije pronađen u bazi."));
 
-            // NOVI DEBUG
-            System.out.println("--- DEBUG: Pretraga SVIH sertifikata iz baze ---");
-            List<Certificate> sviSertifikati = certificateRepository.findAll(); // Dobavi SVE iz baze
-            System.out.println("Ukupno pronađeno sertifikata u bazi: " + sviSertifikati.size());
 
-            for(Certificate cert : sviSertifikati) {
-                System.out.println(
-                        "SN: " + cert.getSerialNumber() +
-                                ", Tip: " + cert.getType() +
-                                ", Povučen: " + cert.isRevoked() +
-                                ", Važi do: " + cert.getValidTo() +
-                                ", DN: " + cert.getSubjectDN()
-                );
-            }
-            System.out.println("-------------------------------------------------");
-
-            // --- Ostatak metode je sada 100% ispravan ---
             if (user.getRole() == null || user.getRoleAsString() == null) {
                 System.err.println("Korisnik " + user.getEmail() + " nema definisanu ulogu!");
                 return Collections.emptyList();
@@ -575,13 +559,8 @@ public class CertificateService {
             if ("ADMIN".equals(userRole)) {
                 issuerCertificates = certificateRepository.findAllActiveCaCertificates(caTypes, now);
             } else if ("CA_USER".equals(userRole) || "ORDINARY_USER".equals(userRole)) {
-                String userOrganization = user.getOrganisation();
-                if (userOrganization == null || userOrganization.isBlank()) {
-                    System.err.println("Korisnik " + user.getEmail() + " nema definisanu organizaciju!");
-                    return Collections.emptyList();
-                }
-                String orgDnPattern = "%O=" + userOrganization + "%";
-                issuerCertificates = certificateRepository.findAllActiveCaCertificatesByOrganizationDN(orgDnPattern, caTypes, now);
+                issuerCertificates = certificateRepository.findAllActiveCaCertificatesByOwner(user, caTypes, now);
+
             } else {
                 issuerCertificates = Collections.emptyList();
             }

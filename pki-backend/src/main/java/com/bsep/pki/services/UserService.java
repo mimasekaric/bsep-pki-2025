@@ -66,6 +66,12 @@ public  Optional<User> getUserByUsername(String username) {
         Optional<User> user = userRepository.findByEmail(username);
         return user;
 }
+
+    public  Optional<User> getUserByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user;
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(username)
