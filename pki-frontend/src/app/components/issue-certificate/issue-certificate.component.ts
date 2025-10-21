@@ -1,11 +1,13 @@
+// issue-certificate.component.ts
+
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CertificateService, IssuerDto } from '../../services/certificate.service';
 import { AuthService, User } from 'src/app/services/auth.service';
-import { Subscription } from 'rxjs';
+import { from, Subscription } from 'rxjs';
+import { CertificateTemplateService, TemplateInfoDTO } from '../../services/template.service';
 
-// Definišemo Enum (ili tip) za CertificateType
 type CertificateType = 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY';
 
 @Component({
@@ -19,6 +21,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
   isRootCertificate = false;
+  isTemplateModalVisible = false;
 
   availableIssuers: IssuerDto[] = []; 
 
@@ -31,19 +34,39 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   private currentUserId: number | null = null;
   private userSubscription: Subscription;
 
+  myTemplates: TemplateInfoDTO[] = [];
+  selectedTemplate: TemplateInfoDTO | null = null;
+
+  private keyUsageMap: { [key: string]: string } = {
+    DIGITAL_SIGNATURE: 'digitalSignature',
+    NON_REPUDIATION: 'nonRepudiation',
+    KEY_ENCIPHERMENT: 'keyEncipherment',
+    DATA_ENCIPHERMENT: 'dataEncipherment',
+    KEY_AGREEMENT: 'keyAgreement',
+    KEY_CERT_SIGN: 'keyCertSign',
+    CRL_SIGN: 'crlSign'
+  };
+
+  private extendedKeyUsageMap: { [key: string]: string } = {
+    SERVER_AUTH: 'serverAuth',
+    CLIENT_AUTH: 'clientAuth',
+    CODE_SIGNING: 'codeSigning',
+    EMAIL_PROTECTION: 'emailProtection',
+    TIME_STAMPING: 'timeStamping'
+  };
+
   constructor(
     private fb: FormBuilder,
     private certificateService: CertificateService,
     private router: Router,
-    private authService: AuthService
+    private authService: AuthService,
+    private templateService: CertificateTemplateService
   ) {
     this.certificateForm = this.fb.group({});
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       if (user && user.id) {
         this.currentUserId = user.id;
-        console.log('ID ulogovanog korisnika je uspešno učitan:', this.currentUserId);
       } else {
-        console.log('Korisnik trenutno nije ulogovan ili podaci nisu dostupni.');
         this.currentUserId = null;
       }
     });
@@ -58,13 +81,6 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const currentUser = this.authService.getCurrentUser();
     
-    if (currentUser) {
-        const roleValue = currentUser.role || 'NEMA ULOGE';
-        console.log("NGONINIT: Ulogovani korisnik pronađen. ID:", currentUser.id, "Uloga:", roleValue);
-    } else {
-        console.log("NGONINIT: Nema ulogovanog korisnika.");
-    }
-    
     if (!currentUser) {
         this.router.navigate(['/login']); 
         return;
@@ -73,30 +89,47 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     const userRole = currentUser.role;
 
     if (userRole === 'ROLE_ORDINARY_USER') {
-      console.log("NGONINIT: Korisnik je ORDINARY_USER, preusmeravanje.");
       alert("Kao običan korisnik ne možete pristupati stranici za izdavanje sertifikata."); 
       this.router.navigate(['/']); 
       return;
-    }
-
-    else if (userRole === 'ROLE_CA_USER') { 
+    } else if (userRole === 'ROLE_CA_USER') { 
       this.isCaUser = true;
-      console.log("NGONINIT: Korisnik je CA_USER. isCaUser postavljeno na TRUE.");
+      this.loadMyTemplates();
     }
     
-    else if (userRole === 'ROLE_ADMIN') { 
-      console.log("NGONINIT: Korisnik je ADMIN.");
-    }
-    
-    else {
-      console.error("NGONINIT: Pronađena nepoznata uloga:", userRole);
-    }
-    
-
     this.initForm();
     this.loadIssuers(); 
   }
 
+  loadMyTemplates(): void {
+    this.templateService.getMyTemplates().subscribe({
+        next: (templates) => {
+            this.myTemplates = templates;
+            console.log("Uspešno učitani šabloni:", this.myTemplates);
+        },
+        error: (err) => {
+            console.error("Greška pri učitavanju šablona:", err);
+        }
+    });
+  }
+
+
+  
+  resetFormToEditable(): void {
+    const currentValues = this.certificateForm.getRawValue();
+    
+    this.certificateForm.enable();
+    this.certificateForm.get('commonName')?.setValidators([Validators.required]);
+    this.certificateForm.get('commonName')?.updateValueAndValidity();
+
+    this.certificateForm.get('keyUsage')?.reset();
+    this.certificateForm.get('extendedKeyUsage')?.reset();
+    
+
+    if(this.isCaUser) {
+      this.isRootCertificate = false;
+    }
+  }
 
   initForm(): void {
     this.certificateForm = this.fb.group({
@@ -147,7 +180,6 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.errorMessage = 'Greška pri učitavanju liste izdavaoca.';
         this.isLoading = false;
-        console.error(err);
       }
     });
   }
@@ -185,22 +217,16 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   toggleCertificateType(): void {
-    console.log("toggleCertificateType: isRootCertificate pre promene:", !this.isRootCertificate);
-    console.log("toggleCertificateType: isCaUser status:", this.isCaUser);
-    
     if (this.isRootCertificate && this.isCaUser) {
         this.isRootCertificate = false; 
         alert("Kao CA korisnik nemate dozvolu za izdavanje Root sertifikata.");
-        console.log("toggleCertificateType: Blokirana Root opcija za CA_USER.");
     }
 
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
     if (this.isRootCertificate) {
-      console.log("toggleCertificateType: Postavljanje forme za Root sertifikat (Issuer: null).");
       issuerControl?.clearValidators();
       issuerControl?.setValue(null);
     } else {
-      console.log("toggleCertificateType: Postavljanje forme za Intermediate/EE sertifikat (Issuer: obavezan).");
       issuerControl?.setValidators([Validators.required]);
     }
     issuerControl?.updateValueAndValidity();
@@ -238,19 +264,14 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     this.successMessage = '';
 
     this.authService.fetchCurrentUserId().subscribe({
-      
       next: (userWithId) => {
-        
         if (!userWithId || !userWithId.id) {
           this.errorMessage = "ID korisnika nije pronađen na serveru. Izdavanje je prekinuto.";
           this.isLoading = false;
-          console.error("KRITIČNA GREŠKA: Odgovor sa /api/users/me je neispravan.", userWithId);
           return;
         }
 
-        console.log(`Dobijen je ispravan ID sa servera: ${userWithId.id}`);
         const subjectUserIdToSend = userWithId.id.toString();
-
         const formValue = this.certificateForm.getRawValue();
         const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
 
@@ -265,8 +286,8 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           certificateType = 'END_ENTITY';
         }
 
-
         const certificateDto = {
+          templateId: this.selectedTemplate ? this.selectedTemplate.id : null,
           commonName: formValue.commonName,
           organization: formValue.organization,
           organizationalUnit: formValue.organizationalUnit,
@@ -275,11 +296,8 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           validFrom: new Date(formValue.validFrom).toISOString(),
           validTo: new Date(formValue.validTo).toISOString(),
           issuerSerialNumber: this.isRootCertificate ? null : formValue.issuerSerialNumber,
-          
           subjectUserId: subjectUserIdToSend,
-
           certificateType: certificateType, 
-          
           keyUsages: Object.keys(formValue.keyUsage).filter(key => formValue.keyUsage[key]).map(key => toSnakeCase(key)),
           extendedKeyUsages: Object.keys(formValue.extendedKeyUsage).filter(key => formValue.extendedKeyUsage[key]).map(key => toSnakeCase(key)),
           subjectAlternativeNames: formValue.subjectAlternativeNames.map(
@@ -287,8 +305,6 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           ),
         };
         
-        console.log("FINALNI DTO koji se šalje na backend:", JSON.stringify(certificateDto, null, 2));
-
         const request = this.isRootCertificate
           ? this.certificateService.issueRootCertificate(certificateDto)
           : this.certificateService.issueCertificate(certificateDto);
@@ -308,18 +324,15 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           error: (error) => {
             this.errorMessage = error.error?.message || error.error || 'Došlo je do neočekivane greške.';
             this.isLoading = false;
-            console.error('Greška pri izdavanju sertifikata:', error);
           }
         });
       },
-
       error: (err) => {
         this.errorMessage = "Greška pri dobavljanju podataka o korisniku. Proverite da li ste ulogovani.";
         this.isLoading = false;
-        console.error('Greška pri pozivu fetchCurrentUserId:', err);
       }
     });
-}
+  }
 
   hasError(fieldName: string): boolean {
     const field = this.certificateForm.get(fieldName);
@@ -334,5 +347,105 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
       if (field.errors['pattern']) return 'Unesite dvoslovnu oznaku države (npr. RS)';
     }
     return '';
+  }
+
+  openTemplateModal(): void {
+    this.isTemplateModalVisible = true;
+  }
+
+  closeTemplateModal(): void {
+    this.isTemplateModalVisible = false;
+  }
+
+  onTemplateSelectedFromModal(template: TemplateInfoDTO): void {
+    this.selectedTemplate = template;
+    console.log("Šablon izabran iz modala:", template);
+    
+    if (this.selectedTemplate) {
+      this.applyTemplate(this.selectedTemplate);
+    }
+
+    this.closeTemplateModal();
+  }
+
+  clearTemplateSelection(): void {
+    this.selectedTemplate = null;
+    this.resetFormToEditable();
+    console.log("Izbor šablona je poništen.");
+  }
+
+  applyTemplate(template: TemplateInfoDTO): void {
+    // 1. Resetujemo formu na početno stanje
+    this.resetFormToEditable();
+
+    // --- NOVO: Postavljanje Izdavaoca (Issuer) ---
+    if (template.issuerSerialNumber) {
+        const issuerControl = this.certificateForm.get('issuerSerialNumber');
+        
+        // Pronalazimo izdavaoca u listi dostupnih
+        const selectedIssuer = this.availableIssuers.find(i => i.serialNumber === template.issuerSerialNumber);
+        
+        if (selectedIssuer) {
+            // Postavljamo vrednost u formu
+            issuerControl?.setValue(selectedIssuer.serialNumber);
+            issuerControl?.disable(); // Zaključavamo polje
+
+            // Ažuriramo datume važenja (kopirano iz logike onIssuerChange)
+            this.issuerValidFromDate = new Date(selectedIssuer.validFrom);
+            this.issuerValidToDate = new Date(selectedIssuer.validTo);
+            this.issuerValidFrom = this.formatDateForInput(this.issuerValidFromDate);
+            this.issuerValidTo = this.formatDateForInput(this.issuerValidToDate);
+        } else {
+            console.warn(`Izdavalac sa serijskim brojem ${template.issuerSerialNumber} nije pronađen u listi dostupnih.`);
+        }
+    }
+    // ---------------------------------------------
+
+    // 2. Postavljamo validatore za Common Name
+    if (template.commonNameRegex) {
+      this.certificateForm.get('commonName')?.setValidators([Validators.required, Validators.pattern(template.commonNameRegex)]);
+      this.certificateForm.get('commonName')?.updateValueAndValidity();
+    }
+
+    // 3. Postavljamo i zaključavamo TTL (period važenja)
+    if (template.ttlDays) {
+        const validFromControl = this.certificateForm.get('validFrom');
+        const validToControl = this.certificateForm.get('validTo');
+        
+        // Uzimamo trenutnu vrednost 'validFrom' (koja je po defaultu 'danas')
+        const fromDate = new Date(validFromControl?.value);
+        const toDate = new Date(fromDate.getTime());
+        toDate.setDate(fromDate.getDate() + template.ttlDays);
+
+        // Provera da li izračunati datum izlazi van opsega izdavaoca
+        if (this.issuerValidToDate && toDate > this.issuerValidToDate) {
+             // Ako izlazi, postavljamo na maksimalni mogući datum izdavaoca
+             validToControl?.setValue(this.formatDateForInput(this.issuerValidToDate));
+        } else {
+             validToControl?.setValue(this.formatDateForInput(toDate));
+        }
+        
+        validToControl?.disable();
+    }
+
+    // 4. Postavljamo i zaključavamo Key Usage
+    const keyUsageGroup = this.certificateForm.get('keyUsage') as FormGroup;
+    for (const backendKey of template.keyUsage) {
+      const formKey = this.keyUsageMap[backendKey];
+      if (formKey) {
+        keyUsageGroup.get(formKey)?.setValue(true);
+        keyUsageGroup.get(formKey)?.disable();
+      }
+    }
+
+    // 5. Postavljamo i zaključavamo Extended Key Usage
+    const extendedKeyUsageGroup = this.certificateForm.get('extendedKeyUsage') as FormGroup;
+    for (const backendKey of template.extendedKeyUsage) {
+        const formKey = this.extendedKeyUsageMap[backendKey];
+        if (formKey) {
+            extendedKeyUsageGroup.get(formKey)?.setValue(true);
+            extendedKeyUsageGroup.get(formKey)?.disable();
+        }
+    }
   }
 }

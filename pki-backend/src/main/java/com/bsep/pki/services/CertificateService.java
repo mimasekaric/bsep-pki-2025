@@ -136,8 +136,6 @@ public class CertificateService {
         );
         X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
 
-        validateExtensionsAgainstIssuerPolicy(dto, issuerCertX509);
-
         // 2. Generisanje podataka za novi sertifikat
         KeyPair subjectKeyPair = cryptoService.generateRSAKeyPair();
         X500Name subjectName = buildX500NameFromDto(dto);
@@ -451,7 +449,7 @@ public class CertificateService {
     @Transactional
     public CertificateDetailsDTO issueCertificateFromCsr(
             Long csrId,
-            ApproveCsrDTO dto // <-- PRIMAMO DTO SA EKSTENZIJAMA
+            ApproveCsrDTO dto
     ) throws Exception {
 
         // 1. Učitavanje podataka
@@ -604,26 +602,6 @@ public class CertificateService {
         }
     }
 
-    private void validateExtensionsAgainstIssuerPolicy(CertificateIssueDTO requestedDto, X509Certificate issuerCert) {
-        boolean[] issuerKeyUsage = issuerCert.getKeyUsage();
-        if (issuerKeyUsage != null && !issuerKeyUsage[5]) { // index 5 je keyCertSign
-            throw new CertificateValidationException("Issuer certificate is not authorized to sign other certificates (Key Usage 'keyCertSign' is missing).");
-        }
-
-        boolean isCaRequest = requestedDto.getCertificateType() == CertificateType.INTERMEDIATE;
-        if (isCaRequest) {
-            if (issuerCert.getBasicConstraints() < 0) {
-                throw new CertificateValidationException("Issuer with BasicConstraints:CA=false cannot issue a new CA certificate.");
-            }
-        }
-
-        if (requestedDto.getKeyUsages() != null && requestedDto.getKeyUsages().contains("CRL_SIGN")) {
-            if (issuerKeyUsage == null || !issuerKeyUsage[6]) { // index 6 je cRLSign
-                throw new CertificateValidationException("Requested 'cRLSign' Key Usage is not permitted by the issuer's policy.");
-            }
-        }
-
-    }
 
 }
 

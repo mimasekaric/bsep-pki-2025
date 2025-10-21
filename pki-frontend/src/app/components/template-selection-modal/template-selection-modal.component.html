@@ -1,0 +1,50 @@
+<!-- Glavni omotač modala, prikazuje se uslovno -->
+<div class="modal-overlay" (click)="close.emit()">
+  
+  <!-- Sadržaj modala - (click) sprečava zatvaranje klika unutar njega -->
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    
+    <!-- Zaglavlje modala -->
+    <div class="modal-header">
+      <h2>Izaberite Šablon Sertifikata</h2>
+      <button class="close-button" (click)="close.emit()" title="Zatvori">&times;</button>
+    </div>
+
+    <!-- Telo modala sa karticama -->
+    <div class="modal-body">
+      <div class="cards-container">
+        
+        <!-- Koristimo *ngFor za iteraciju kroz sve dostupne šablone -->
+        <div class="template-card" *ngFor="let template of templates">
+          <h3 class="card-title">{{ template.templateName }}</h3>
+          
+          <div class="card-details">
+            <p><strong>Izdavač (SN):</strong> <small>{{ template.issuerSerialNumber }}</small></p>
+            <p><strong>Period važenja:</strong> {{ template.ttlDays }} dana</p>
+          </div>
+
+          <div class="card-section">
+            <h4>Key Usage:</h4>
+            <div class="tags-container">
+              <span *ngFor="let usage of template.keyUsage" class="tag ku-tag">{{ usage }}</span>
+              <span *ngIf="template.keyUsage.length === 0" class="tag no-tag">Nije definisano</span>
+            </div>
+          </div>
+
+          <div class="card-section">
+            <h4>Extended Key Usage:</h4>
+            <div class="tags-container">
+                <span *ngFor="let extUsage of template.extendedKeyUsage" class="tag eku-tag">{{ extUsage }}</span>
+                <span *ngIf="template.extendedKeyUsage.length === 0" class="tag no-tag">Nije definisano</span>
+            </div>
+          </div>
+
+          <!-- Dugme za izbor ovog šablona -->
+          <button class="btn-select" (click)="selectTemplate(template)">Izaberi</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

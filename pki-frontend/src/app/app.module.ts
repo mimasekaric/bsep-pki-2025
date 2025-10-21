@@ -17,6 +17,7 @@ import { TemplateComponent } from './components/template/template.component';
 import { AuthInterceptor } from '../app/inceptors/auth.inceptor';
 import { AuthService } from './services/auth.service';
 import {HTTP_INTERCEPTORS } from '@angular/common/http';
+import { TemplateSelectionModalComponent } from './components/template-selection-modal/template-selection-modal.component';
 
 @NgModule({
   declarations: [
@@ -29,7 +30,8 @@ import {HTTP_INTERCEPTORS } from '@angular/common/http';
     ForgotPasswordComponent,
     ResetPasswordComponent,
     TokensComponent,
-    TemplateComponent
+    TemplateComponent,
+    TemplateSelectionModalComponent
   ],
   imports: [
     BrowserModule,

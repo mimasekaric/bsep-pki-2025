@@ -53,6 +53,21 @@
             Morate izabrati sertifikat izdavaoca.
           </span>
         </div>
+        <div class="form-group" *ngIf="isCaUser && myTemplates.length > 0">
+    <label>Šablon Sertifikata</label>
+    <div class="template-selection-wrapper">
+        <button type="button" class="btn-choose-template" (click)="openTemplateModal()">
+            {{ selectedTemplate ? 'Izmenite Šablon' : 'Izaberite Šablon...' }}
+        </button>
+        <!-- Prikazujemo ime izabranog šablona i dugme za resetovanje -->
+        <div *ngIf="selectedTemplate" class="selected-template-info">
+            <span>"{{ selectedTemplate.templateName }}"</span>
+            <button type="button" class="btn-clear-template" (click)="clearTemplateSelection()" title="Ukloni šablon">&times;</button>
+        </div>
+    </div>
+    <small class="form-hint">Izborom šablona automatski ćete popuniti i zaključati određena polja.</small>
+</div>
+        
       </div>
 
       <!-- Sekcija 2: Informacije o Subjektu -->
@@ -189,4 +204,9 @@
   </div>
 </div>
 
-
+<app-template-selection-modal
+    *ngIf="isTemplateModalVisible"
+    [templates]="myTemplates"
+    (selected)="onTemplateSelectedFromModal($event)"
+    (close)="closeTemplateModal()">
+</app-template-selection-modal>
