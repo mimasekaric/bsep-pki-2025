@@ -27,28 +27,6 @@ public class CertificateFactory {
 
     @Value("${crl.base.url}")
     private String crlBaseUrl;
-    /*public X509Certificate createCertificate(
-            X500Name subject, X500Name issuer,
-            PublicKey subjectPublicKey, PrivateKey issuerPrivateKey,
-            ZonedDateTime validFrom, ZonedDateTime validTo,
-            BigInteger serialNumber,
-            boolean isCa, int keyUsage) throws Exception {
-
-        JcaX509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder(
-                issuer, serialNumber,
-                Date.from(validFrom.toInstant()),
-                Date.from(validTo.toInstant()),
-                subject, subjectPublicKey);
-
-        certBuilder.addExtension(Extension.basicConstraints, true, new BasicConstraints(isCa));
-        certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(keyUsage));
-
-        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA256WithRSAEncryption")
-                .setProvider("BC").build(issuerPrivateKey);
-
-        return new JcaX509CertificateConverter().setProvider("BC")
-                .getCertificate(certBuilder.build(contentSigner));
-    }*/
 
     public X509Certificate createCertificate(
             X500Name subject, X500Name issuer,

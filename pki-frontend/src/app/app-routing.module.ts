@@ -9,6 +9,7 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { AuthGuard } from './auth.guard';
 import { TokensComponent } from './components/tokens/tokens.component';
+import { TemplateComponent } from './components/template/template.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/splash', pathMatch: 'full' },
@@ -18,9 +19,10 @@ const routes: Routes = [
   { path: 'tokens', component: TokensComponent },
   { path: 'verify-email', component: EmailVerificationComponent },
   { path: 'issue-certificate', component: IssueCertificateComponent },
-  { path: '**', redirectTo: '/splash' },
   { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent }
+  { path: 'reset-password', component: ResetPasswordComponent },
+  { path: 'template', component: TemplateComponent },
+  { path: '**', redirectTo: '/splash' }
 ];
 
 @NgModule({

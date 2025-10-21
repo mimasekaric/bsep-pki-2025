@@ -13,6 +13,7 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { HttpClientModule } from '@angular/common/http';
 import { AuthGuard } from './auth.guard';
 import { TokensComponent } from './components/tokens/tokens.component';
+import { TemplateComponent } from './components/template/template.component';
 import { AuthInterceptor } from '../app/inceptors/auth.inceptor';
 import { AuthService } from './services/auth.service';
 import {HTTP_INTERCEPTORS } from '@angular/common/http';
@@ -27,7 +28,8 @@ import {HTTP_INTERCEPTORS } from '@angular/common/http';
     IssueCertificateComponent,
     ForgotPasswordComponent,
     ResetPasswordComponent,
-    TokensComponent
+    TokensComponent,
+    TemplateComponent
   ],
   imports: [
     BrowserModule,

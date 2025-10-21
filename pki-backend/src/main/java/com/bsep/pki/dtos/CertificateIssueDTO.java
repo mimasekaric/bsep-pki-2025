@@ -25,4 +25,6 @@ public class CertificateIssueDTO {
     private List<String> keyUsages;
     private List<String> extendedKeyUsages;
     private List<String> subjectAlternativeNames;
+
+    private Long templateId;
 }

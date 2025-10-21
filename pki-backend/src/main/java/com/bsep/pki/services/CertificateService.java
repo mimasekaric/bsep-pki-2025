@@ -37,6 +37,7 @@ import java.io.FileInputStream;
 import java.math.BigInteger;
 import java.security.*;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -56,6 +57,7 @@ public class CertificateService {
     private final CrlService crlService;
     private final CSRRepository csrRepository;
     private final CSRService csrService;
+    private final CertificateTemplateService templateService;
 
     @Transactional
     public Certificate issueRootCertificate(UUID adminId, CertificateIssueDTO dto) throws Exception {
@@ -90,6 +92,30 @@ public class CertificateService {
 
     @Transactional
     public Object issueCertificate(CertificateIssueDTO dto) throws Exception {
+        if (dto.getTemplateId() != null) {
+            System.out.println("Template ID provided: " + dto.getTemplateId() + ". Applying template logic.");
+            CertificateTemplate template = templateService.getTemplateById(dto.getTemplateId());
+
+            // 1. Provera da li se issuer iz DTO-a poklapa sa onim iz šablona
+            if (!template.getIssuerSerialNumber().equals(dto.getIssuerSerialNumber())) {
+                throw new ValidationException("Issuer specified in request does not match the template's issuer.");
+            }
+
+            // 2. Validacija na osnovu regularnih izraza i TTL-a iz šablona
+            validateCertificateDataWithTemplate(dto, template);
+
+            // 3. Popunjavanje ekstenzija ako ih korisnik nije poslao
+            // Ako je korisnik poslao svoju listu, ta lista ima prednost.
+            // Ako nije, koristimo podrazumevanu iz šablona.
+            if (dto.getKeyUsages() == null || dto.getKeyUsages().isEmpty()) {
+                dto.setKeyUsages(template.getKeyUsage());
+                System.out.println("Applying Key Usages from template: " + template.getKeyUsage());
+            }
+            if (dto.getExtendedKeyUsages() == null || dto.getExtendedKeyUsages().isEmpty()) {
+                dto.setExtendedKeyUsages(template.getExtendedKeyUsage());
+                System.out.println("Applying Extended Key Usages from template: " + template.getExtendedKeyUsage());
+            }
+        }
         // 1. Validacija i učitavanje izdavaoca
         Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
         User subjectUser = userRepository.findById(dto.getSubjectUserId())
@@ -109,6 +135,8 @@ public class CertificateService {
                 issuerCertData.getAlias()
         );
         X509Certificate issuerCertX509 = (X509Certificate) issuerChain[0];
+
+        validateExtensionsAgainstIssuerPolicy(dto, issuerCertX509);
 
         // 2. Generisanje podataka za novi sertifikat
         KeyPair subjectKeyPair = cryptoService.generateRSAKeyPair();
@@ -201,6 +229,34 @@ public class CertificateService {
             return new CertificateWithPrivateKeyDTO(new CertificateDetailsDTO(certEntity), privateKeyPem);
         }
 
+    }
+
+    private void validateCertificateDataWithTemplate(CertificateIssueDTO dto, CertificateTemplate template) {
+        // Validacija Common Name
+        if (template.getCommonNameRegex() != null && !template.getCommonNameRegex().isBlank()) {
+            if (!dto.getCommonName().matches(template.getCommonNameRegex())) {
+                throw new ValidationException("Common Name does not match the template's required pattern: " + template.getCommonNameRegex());
+            }
+        }
+
+        // Validacija Subject Alternative Names (SANs)
+        if (template.getSanRegex() != null && !template.getSanRegex().isBlank()) {
+            if (dto.getSubjectAlternativeNames() != null) {
+                for (String sanValue : dto.getSubjectAlternativeNames()) {
+                    // Ekstrahujemo samo vrednost (npr. 'example.com' iz 'dns:example.com')
+                    String actualValue = sanValue.contains(":") ? sanValue.substring(sanValue.indexOf(":") + 1) : sanValue;
+                    if (!actualValue.matches(template.getSanRegex())) {
+                        throw new ValidationException("A SAN value '" + actualValue + "' does not match the template's required pattern: " + template.getSanRegex());
+                    }
+                }
+            }
+        }
+
+        // Validacija TTL (vreme važenja)
+        long requestedTtlDays = Duration.between(dto.getValidFrom(), dto.getValidTo()).toDays();
+        if (requestedTtlDays > template.getTtlDays()) {
+            throw new ValidationException("The requested certificate duration (" + requestedTtlDays + " days) exceeds the maximum allowed by the template (" + template.getTtlDays() + " days).");
+        }
     }
 
     private Certificate validateIssuer(String issuerSerial) {
@@ -546,6 +602,27 @@ public class CertificateService {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    private void validateExtensionsAgainstIssuerPolicy(CertificateIssueDTO requestedDto, X509Certificate issuerCert) {
+        boolean[] issuerKeyUsage = issuerCert.getKeyUsage();
+        if (issuerKeyUsage != null && !issuerKeyUsage[5]) { // index 5 je keyCertSign
+            throw new CertificateValidationException("Issuer certificate is not authorized to sign other certificates (Key Usage 'keyCertSign' is missing).");
+        }
+
+        boolean isCaRequest = requestedDto.getCertificateType() == CertificateType.INTERMEDIATE;
+        if (isCaRequest) {
+            if (issuerCert.getBasicConstraints() < 0) {
+                throw new CertificateValidationException("Issuer with BasicConstraints:CA=false cannot issue a new CA certificate.");
+            }
+        }
+
+        if (requestedDto.getKeyUsages() != null && requestedDto.getKeyUsages().contains("CRL_SIGN")) {
+            if (issuerKeyUsage == null || !issuerKeyUsage[6]) { // index 6 je cRLSign
+                throw new CertificateValidationException("Requested 'cRLSign' Key Usage is not permitted by the issuer's policy.");
+            }
+        }
+
     }
 
 }
