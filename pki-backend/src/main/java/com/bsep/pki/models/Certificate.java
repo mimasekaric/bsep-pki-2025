@@ -34,4 +34,11 @@ public class Certificate {
     private boolean revoked = false;
     private LocalDateTime revocationDate;
     private String revocationReason;
+
+    public boolean isCa(){
+        if (this.type == CertificateType.ROOT || this.type == CertificateType.INTERMEDIATE){
+            return true;
+        }
+        return false;
+    }
 }
