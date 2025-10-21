@@ -56,36 +56,43 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // =================================================================
-    // ==== KONTROLA PRISTUPA NA OSNOVU ULOGE ==========================
-    // =================================================================
     const currentUser = this.authService.getCurrentUser();
     
+    if (currentUser) {
+        const roleValue = currentUser.role || 'NEMA ULOGE';
+        console.log("NGONINIT: Ulogovani korisnik pronađen. ID:", currentUser.id, "Uloga:", roleValue);
+    } else {
+        console.log("NGONINIT: Nema ulogovanog korisnika.");
+    }
+    
     if (!currentUser) {
-        // Korisnik nije ulogovan, trebalo bi da ga već uhvati Auth Guard
         this.router.navigate(['/login']); 
         return;
     }
 
     const userRole = currentUser.role;
 
-    // A) Za Običnog Korisnika (ORDINARY_USER): Ne sme pristupiti
-    if (userRole === 'ORDINARY_USER') {
-      // Prikazujemo poruku i preusmeravamo ga
-      // Podesite ovo prema Vašoj implementaciji notifikacija (npr. SweetAlert2)
+    if (userRole === 'ROLE_ORDINARY_USER') {
+      console.log("NGONINIT: Korisnik je ORDINARY_USER, preusmeravanje.");
       alert("Kao običan korisnik ne možete pristupati stranici za izdavanje sertifikata."); 
-      this.router.navigate(['/']); // Preusmeravanje na početnu ili login
+      this.router.navigate(['/']); 
       return;
     }
 
-    // B) Za CA Korisnika (CA_USER): Ne može izdavati Root
-    if (userRole === 'CA_USER') {
+    else if (userRole === 'ROLE_CA_USER') { 
       this.isCaUser = true;
+      console.log("NGONINIT: Korisnik je CA_USER. isCaUser postavljeno na TRUE.");
     }
     
-    // Za ADMINA, obe varijable (isCaUser i isRootCertificate) ostaju false/default
+    else if (userRole === 'ROLE_ADMIN') { 
+      console.log("NGONINIT: Korisnik je ADMIN.");
+    }
+    
+    else {
+      console.error("NGONINIT: Pronađena nepoznata uloga:", userRole);
+    }
+    
 
-    // Inicijalizacija i učitavanje se dešavaju samo ako korisnik IMA dozvolu (ADMIN ili CA_USER)
     this.initForm();
     this.loadIssuers(); 
   }
@@ -178,21 +185,22 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   toggleCertificateType(): void {
-    // Ako je korisnik CA korisnik, ne sme da prebaci na Root, 
-    // iako je polje disabled, ova provera je sigurnosna
-    if (this.isCaUser && this.isRootCertificate) {
-        // Vraćamo isRootCertificate nazad na false ako je korisnik CA_USER
-        this.isRootCertificate = false;
-        // Prikazati poruku korisniku (opciono, jer je disabled u HTML-u)
+    console.log("toggleCertificateType: isRootCertificate pre promene:", !this.isRootCertificate);
+    console.log("toggleCertificateType: isCaUser status:", this.isCaUser);
+    
+    if (this.isRootCertificate && this.isCaUser) {
+        this.isRootCertificate = false; 
         alert("Kao CA korisnik nemate dozvolu za izdavanje Root sertifikata.");
-        return; 
+        console.log("toggleCertificateType: Blokirana Root opcija za CA_USER.");
     }
 
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
     if (this.isRootCertificate) {
+      console.log("toggleCertificateType: Postavljanje forme za Root sertifikat (Issuer: null).");
       issuerControl?.clearValidators();
       issuerControl?.setValue(null);
     } else {
+      console.log("toggleCertificateType: Postavljanje forme za Intermediate/EE sertifikat (Issuer: obavezan).");
       issuerControl?.setValidators([Validators.required]);
     }
     issuerControl?.updateValueAndValidity();
@@ -246,22 +254,16 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
         const formValue = this.certificateForm.getRawValue();
         const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
 
-        // =================================================================
-        // ==== NOVA LOGIKA ZA ODREĐIVANJE TIPA SERTIFIKATA ================
-        // =================================================================
         let certificateType: CertificateType;
         const isCaSelected = formValue.basicConstraints.isCa;
 
         if (this.isRootCertificate) {
           certificateType = 'ROOT';
         } else if (isCaSelected) {
-          // Ako nije Root I izabrano je "Ovo je CA sertifikat"
           certificateType = 'INTERMEDIATE';
         } else {
-          // Ako nije Root I NIJE izabrano "Ovo je CA sertifikat"
           certificateType = 'END_ENTITY';
         }
-        // =================================================================
 
 
         const certificateDto = {
@@ -276,7 +278,6 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           
           subjectUserId: subjectUserIdToSend,
 
-          // NOVO: Dodavanje polja u DTO koje očekuje BE
           certificateType: certificateType, 
           
           keyUsages: Object.keys(formValue.keyUsage).filter(key => formValue.keyUsage[key]).map(key => toSnakeCase(key)),
