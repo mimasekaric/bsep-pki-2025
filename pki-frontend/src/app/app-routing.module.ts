@@ -13,6 +13,7 @@ import { AuthGuard } from './auth.guard';
 import { TokensComponent } from './components/tokens/tokens.component';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/splash', pathMatch: 'full' },
@@ -26,9 +27,10 @@ const routes: Routes = [
   { path: 'csr/list-pending', component: CsrListComponent, canActivate: [AuthGuard] },
   { path: 'admin', component: AdminComponent, canActivate: [AuthGuard] },
   { path: 'change-password', component: ChangePasswordComponent, canActivate: [AuthGuard] },
-  { path: '**', redirectTo: '/splash' },
   { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent }
+  { path: 'reset-password', component: ResetPasswordComponent },
+  { path: 'certificates', component: CertificateListComponent },
+  { path: '**', redirectTo: '/splash' },
 ];
 
 @NgModule({

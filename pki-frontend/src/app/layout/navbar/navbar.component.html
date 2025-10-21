@@ -13,6 +13,9 @@
         <li *ngIf="isLoggedIn && (isAdmin || isCaUser) && !mustChangePassword">
           <a routerLink="/csr/list-pending" routerLinkActive="active-link">CSR Zahtevi</a>
         </li>
+         <li *ngIf="isLoggedIn">
+          <a routerLink="/certificates" routerLinkActive="active-link">Moji Sertifikati</a>
+        </li>
       </ul>
 
       <!-- Desni deo -->

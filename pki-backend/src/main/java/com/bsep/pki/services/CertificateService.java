@@ -910,7 +910,48 @@ public class CertificateService {
             e.printStackTrace();
             throw e;
         }
+
+
     }
+
+    public List<CertificateDetailsDTO> getAllCertificates() {
+
+        List<Certificate> allCertificates = certificateRepository.findAll();
+        return allCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    public List<CertificateDetailsDTO> getEndEntityCertificatesForUser(UUID ownerId) {
+
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + ownerId));
+
+        List<Certificate> userCertificates = certificateRepository.findByOwnerIdAndType(
+                ownerId,
+                CertificateType.END_ENTITY
+        );
+
+        return userCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+    public List<CertificateDetailsDTO> getCaCertificatesForUser(UUID ownerId) {
+
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + ownerId));
+
+        List<Certificate> userCertificates = certificateRepository.findByOwnerIdAndType(
+                ownerId,
+                CertificateType.INTERMEDIATE
+        );
+
+        return userCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+
+
 
 }
 

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+import { CertificateDetailsDTO } from './certificate.service';
 
 // --- Interfejsi ostaju isti ---
 export interface CsrSubmitPayload {
@@ -103,4 +104,5 @@ export class CsrService {
     if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
     return this.http.post<CsrResponse>(`${this.baseUrl}/csr/${csrId}/reject`, payload, { headers });
   }
+
 }

@@ -36,4 +36,8 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
             @Param("caTypes") List<CertificateType> caTypes,
             @Param("currentDate") LocalDateTime currentDate
     );
+    List<Certificate> findByOwnerIdAndType(UUID ownerId, CertificateType type);
+
+
+
 }

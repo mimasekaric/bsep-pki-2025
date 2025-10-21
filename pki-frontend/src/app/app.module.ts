@@ -30,6 +30,9 @@ import { ApproveDialogComponent } from './components/approve-dialog.component.ts
 import { AdminComponent } from './components/admin/admin.component';
 import { ChangePasswordComponent } from './components/change-password/change-password.component';
 import { RejectDialogComponent } from './components/reject-dialog/reject-dialog.component';
+import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
+import { ParseDnPipe } from './pipes/parse-dn.pipe';
+import { RevokeDialogComponent } from './components/revoke-dialog/revoke-dialog.component';
 
 
 
@@ -50,7 +53,10 @@ import { RejectDialogComponent } from './components/reject-dialog/reject-dialog.
     ChangePasswordComponent,
     RejectDialogComponent,
     ForgotPasswordComponent,
-    ResetPasswordComponent
+    ResetPasswordComponent,
+    CertificateListComponent,
+    ParseDnPipe,
+    RevokeDialogComponent
   ],
   imports: [
     BrowserModule,

@@ -77,4 +77,37 @@ export class CertificateService {
       'Authorization': `Bearer ${token}`
     });
   }
+  
+   getAllCertificates(): Observable<CertificateDetailsDTO[]> {
+    const headers = this.createAuthHeaders();
+    if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
+    
+    return this.http.get<CertificateDetailsDTO[]>(`${this.apiUrl}/adminCertificates`, { headers });
+  }
+
+  
+  getChainForCaUser(): Observable<CertificateDetailsDTO[]> {
+    const headers = this.createAuthHeaders();
+    if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
+    return this.http.get<CertificateDetailsDTO[]>(`${this.apiUrl}/caCertificates`, { headers });
+  }
+
+  
+  getCertificatesForUser(): Observable<CertificateDetailsDTO[]> {
+    const headers = this.createAuthHeaders();
+    if (!headers) return throwError(() => new Error('Korisnik nije autentifikovan.'));
+
+    return this.http.get<CertificateDetailsDTO[]>(`${this.apiUrl}/endEntityCertificates`, { headers });
+  }
+
+    downloadCertificate(certificateId: number): Observable<Blob> {
+    const headers = this.createAuthHeaders();
+    if (!headers) {
+      return throwError(() => new Error('Korisnik nije autentifikovan.'));
+    }
+    return this.http.get(`${this.apiUrl}/download/${certificateId}`, {
+      headers: headers.delete('Content-Type'), 
+      responseType: 'blob' 
+    });
+  }
 }

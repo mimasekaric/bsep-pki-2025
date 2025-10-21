@@ -61,8 +61,8 @@ export class LoginComponent {
             queryParams: { forced: 'true' } 
           });
         } else {
-          
-          this.router.navigate(['/issue-certificate']);
+
+          this.router.navigate(['/certificates']);
         }
         
         this.isLoading = false;
