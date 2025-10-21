@@ -19,15 +19,17 @@
         <!-- Toggle za izbor Root vs. ostali sertifikati -->
         <div class="form-group toggle-wrapper">
           <label class="toggle-container">
-            <input 
-              type="checkbox" 
-              [(ngModel)]="isRootCertificate" 
-              [ngModelOptions]="{standalone: true}" 
-              (change)="toggleCertificateType()" 
-            />
-            <span class="toggle-slider"></span>
-            <span class="toggle-text">Kreiraj kao samopotpisani (Root) Sertifikat</span>
+              <input 
+                  type="checkbox" 
+                  [(ngModel)]="isRootCertificate" 
+                  [ngModelOptions]="{standalone: true}" 
+                  (change)="toggleCertificateType()" 
+                  [disabled]="isCaUser"
+              />
+              <span class="toggle-slider"></span>
+              <span class="toggle-text">Kreiraj kao samopotpisani (Root) Sertifikat</span>
           </label>
+          <small *ngIf="isCaUser" class="form-hint text-danger">Kao CA korisnik, nemate dozvolu za izdavanje Root sertifikata.</small>
         </div>
 
         <!-- Unapređeni izbor izdavaoca - prikazuje se samo ako NIJE root -->

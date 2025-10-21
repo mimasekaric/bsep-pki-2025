@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CertificateService, IssuerDto } from '../../services/certificate.service';
-import { AuthService } from 'src/app/services/auth.service';
+import { AuthService, User } from 'src/app/services/auth.service';
 import { Subscription } from 'rxjs';
 
 // Definišemo Enum (ili tip) za CertificateType
@@ -26,6 +26,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   issuerValidTo: string = '';
   issuerValidFromDate: Date | null = null;
   issuerValidToDate: Date | null = null;
+  isCaUser = false;
 
   private currentUserId: number | null = null;
   private userSubscription: Subscription;
@@ -55,9 +56,40 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // =================================================================
+    // ==== KONTROLA PRISTUPA NA OSNOVU ULOGE ==========================
+    // =================================================================
+    const currentUser = this.authService.getCurrentUser();
+    
+    if (!currentUser) {
+        // Korisnik nije ulogovan, trebalo bi da ga već uhvati Auth Guard
+        this.router.navigate(['/login']); 
+        return;
+    }
+
+    const userRole = currentUser.role;
+
+    // A) Za Običnog Korisnika (ORDINARY_USER): Ne sme pristupiti
+    if (userRole === 'ORDINARY_USER') {
+      // Prikazujemo poruku i preusmeravamo ga
+      // Podesite ovo prema Vašoj implementaciji notifikacija (npr. SweetAlert2)
+      alert("Kao običan korisnik ne možete pristupati stranici za izdavanje sertifikata."); 
+      this.router.navigate(['/']); // Preusmeravanje na početnu ili login
+      return;
+    }
+
+    // B) Za CA Korisnika (CA_USER): Ne može izdavati Root
+    if (userRole === 'CA_USER') {
+      this.isCaUser = true;
+    }
+    
+    // Za ADMINA, obe varijable (isCaUser i isRootCertificate) ostaju false/default
+
+    // Inicijalizacija i učitavanje se dešavaju samo ako korisnik IMA dozvolu (ADMIN ili CA_USER)
     this.initForm();
     this.loadIssuers(); 
   }
+
 
   initForm(): void {
     this.certificateForm = this.fb.group({
@@ -146,6 +178,16 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   toggleCertificateType(): void {
+    // Ako je korisnik CA korisnik, ne sme da prebaci na Root, 
+    // iako je polje disabled, ova provera je sigurnosna
+    if (this.isCaUser && this.isRootCertificate) {
+        // Vraćamo isRootCertificate nazad na false ako je korisnik CA_USER
+        this.isRootCertificate = false;
+        // Prikazati poruku korisniku (opciono, jer je disabled u HTML-u)
+        alert("Kao CA korisnik nemate dozvolu za izdavanje Root sertifikata.");
+        return; 
+    }
+
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
     if (this.isRootCertificate) {
       issuerControl?.clearValidators();
