@@ -32,6 +32,8 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
 
   private currentUserId: number | null = null;
   private userSubscription: Subscription;
+  private caUserOrganization: string | null = null;
+
 
   myTemplates: TemplateInfoDTO[] = [];
   selectedTemplate: TemplateInfoDTO | null = null;
@@ -94,6 +96,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     } else if (userRole === 'ROLE_CA_USER') { 
       this.isCaUser = true;
       this.loadMyTemplates();
+      this.lockOrganizationForCaUser();
     }
     
     this.initForm();
@@ -140,6 +143,12 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
 
     if(this.isCaUser) {
       this.isRootCertificate = false;
+    }
+
+    if (this.isCaUser && this.caUserOrganization) {
+      const organizationControl = this.certificateForm.get('organization');
+      organizationControl?.setValue(this.caUserOrganization);
+      organizationControl?.disable();
     }
   }
 
@@ -472,4 +481,25 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
         }
     }
   }
+
+
+private lockOrganizationForCaUser(): void {
+  this.authService.fetchCurrentUserOrganization().subscribe({
+    next: (orgName) => {
+      this.caUserOrganization = orgName;
+
+      const organizationControl = this.certificateForm.get('organization');
+
+      organizationControl?.setValue(orgName);
+
+      organizationControl?.disable();
+      
+      console.log(`Polje 'organization' je postavljeno na vrednost '${orgName}' i zaključano.`);
+    },
+    error: (err) => {
+      console.error("Greška pri dobavljanju organizacije za CA korisnika:", err);
+      this.errorMessage = "Nije moguće dobaviti vašu organizaciju. Molimo pokušajte ponovo.";
+    }
+  });
+}
 }

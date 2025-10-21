@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 export interface LoginRequest {
@@ -39,6 +39,10 @@ export interface User {
   surname: string;
   email: string;
   role: string;
+}
+
+export interface UserOrganizationResponseDTO {
+  organization: string;
 }
 
 @Injectable({
@@ -177,6 +181,15 @@ export class AuthService {
 
   fetchCurrentUserId(): Observable<{ id: number }> {
     return this.http.get<{ id: number }>(`${this.apiUrl}/me`);
+  }
+
+  fetchCurrentUserOrganization(): Observable<string> {
+    return this.http.get<UserOrganizationResponseDTO>(`${this.apiUrl}/my-organisation`).pipe(
+      map(response => {
+        console.log("Primljen odgovor od servera:", response); 
+        return response.organization;
+      })
+    );
   }
 
 }

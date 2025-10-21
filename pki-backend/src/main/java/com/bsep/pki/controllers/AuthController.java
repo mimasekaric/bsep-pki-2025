@@ -6,6 +6,7 @@ import com.bsep.pki.dtos.requests.ResetPasswordRequest;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserIdResponseDTO;
+import com.bsep.pki.dtos.responses.UserOrganizationResponseDTO;
 import com.bsep.pki.exceptions.InvalidTokenException;
 import com.bsep.pki.services.PasswordResetService;
 import com.bsep.pki.services.VerificationTokenService;
@@ -168,6 +169,36 @@ public class AuthController {
             }
 
             UserIdResponseDTO response = new UserIdResponseDTO(user.getId());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    @GetMapping("/my-organisation")
+    public ResponseEntity<UserOrganizationResponseDTO> getCurrentUserOrganisation(@RequestHeader(name = "Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            Jwt decodedJwt = this.jwtDecoder.decode(token);
+
+            String email = decodedJwt.getSubject();
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            User user = userService.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            UserOrganizationResponseDTO response = new UserOrganizationResponseDTO(user.getOrganisation());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

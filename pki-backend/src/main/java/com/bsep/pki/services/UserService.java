@@ -121,13 +121,9 @@ public  Optional<User> getUserByUsername(String username) {
             List<User> allUsers = userRepository.findAll();
             log.info("   -> Pronađeno ukupno {} korisnika u bazi.", allUsers.size());
 
-            List<User> filteredUsers = allUsers.stream()
-                    .filter(user -> !user.getId().equals(currentUser.getId()))
-                    .toList();
-            log.info("   -> Nakon filtriranja (uklanjanja samog sebe), ostalo je {} korisnika.", filteredUsers.size());
 
-            log.info("<<< Završena metoda. Vraćam listu od {} korisnika.", filteredUsers.size());
-            return filteredUsers;
+            log.info("<<< Završena metoda. Vraćam listu od {} korisnika.", allUsers.size());
+            return allUsers;
 
         } else if (currentUser.getRole().equals(UserRole.CA_USER)) {
             log.info("3. Korisnik je CA_USER. Dohvatam korisnike iz organizacije '{}'.", currentUser.getOrganisation());
@@ -143,13 +139,7 @@ public  Optional<User> getUserByUsername(String username) {
             List<User> usersInOrg = userRepository.findByOrganisationAndRoleIn(currentUser.getOrganisation(), rolesToFetch);
             log.info("   -> Pronađeno {} korisnika u organizaciji sa traženim rolama.", usersInOrg.size());
 
-            List<User> filteredUsers = usersInOrg.stream()
-                    .filter(user -> !user.getId().equals(currentUser.getId()))
-                    .toList();
-            log.info("   -> Nakon filtriranja (uklanjanja samog sebe), ostalo je {} korisnika.", filteredUsers.size());
-
-            log.info("<<< Završena metoda. Vraćam listu od {} korisnika.", filteredUsers.size());
-            return filteredUsers;
+            return usersInOrg;
         }
 
         log.warn("4. Ulogovani korisnik nije ni ADMIN ni CA_USER. Rola: {}. Vraćam praznu listu.", currentUser.getRoleAsString());
