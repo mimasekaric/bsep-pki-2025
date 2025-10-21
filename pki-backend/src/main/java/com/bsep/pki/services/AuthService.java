@@ -31,16 +31,18 @@ public class AuthService implements IAuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
     private final IUserService userService;
+    private final RecaptchaService recaptchaService;
 
     @Value("${app.jwt.expiration}")
     private long jwtExpirySeconds;
 
     public AuthService(AuthenticationManager authenticationManager,
                        JwtEncoder jwtEncoder,
-                       IUserService userService) {
+                       IUserService userService, RecaptchaService recaptchaService) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
+        this.recaptchaService = recaptchaService;
     }
 
     @Override
@@ -48,6 +50,9 @@ public class AuthService implements IAuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
         );
+        if (!recaptchaService.validateRecaptcha(loginRequest.getRecaptchaToken())) {
+            throw new SecurityException("reCAPTCHA validation failed.");
+        }
 
 
         String email = authentication.getName();

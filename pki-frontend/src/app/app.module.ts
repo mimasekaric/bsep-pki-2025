@@ -33,6 +33,7 @@ import { RejectDialogComponent } from './components/reject-dialog/reject-dialog.
 import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
 import { ParseDnPipe } from './pipes/parse-dn.pipe';
 import { RevokeDialogComponent } from './components/revoke-dialog/revoke-dialog.component';
+import {NgxCaptchaModule } from 'ngx-captcha';
 
 
 
@@ -70,7 +71,8 @@ import { RevokeDialogComponent } from './components/revoke-dialog/revoke-dialog.
     MatSelectModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    BrowserAnimationsModule
+    BrowserAnimationsModule,
+    NgxCaptchaModule
     
   ],
    providers: [
