@@ -37,6 +37,13 @@ export interface CertificateWithPrivateKeyDTO {
   privateKeyPem: string;
 }
 
+export interface SubjectDto {
+  id: string; 
+  name: string;
+  surname: string;
+  role: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -55,5 +62,9 @@ export class CertificateService {
 
   getAvailableIssuers(): Observable<IssuerDto[]> {
     return this.http.get<IssuerDto[]>(`${this.apiUrl}/issuers`);
+  }
+
+  getPotentialSubjects(): Observable<SubjectDto[]> {
+    return this.http.get<SubjectDto[]>(`${this.apiUrl}/potential-subjects`);
   }
 }

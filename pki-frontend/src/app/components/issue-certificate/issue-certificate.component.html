@@ -53,18 +53,37 @@
             Morate izabrati sertifikat izdavaoca.
           </span>
         </div>
-        <div class="form-group" *ngIf="isCaUser && myTemplates.length > 0">
-    <label>Šablon Sertifikata</label>
-    <div class="template-selection-wrapper">
-        <button type="button" class="btn-choose-template" (click)="openTemplateModal()">
-            {{ selectedTemplate ? 'Izmenite Šablon' : 'Izaberite Šablon...' }}
-        </button>
-        <!-- Prikazujemo ime izabranog šablona i dugme za resetovanje -->
-        <div *ngIf="selectedTemplate" class="selected-template-info">
-            <span>"{{ selectedTemplate.templateName }}"</span>
-            <button type="button" class="btn-clear-template" (click)="clearTemplateSelection()" title="Ukloni šablon">&times;</button>
+
+        <div class="form-group" *ngIf="!isRootCertificate">
+          <label for="subjectUser">Subjekt Sertifikata *</label>
+          <select 
+            id="subjectUser" 
+            formControlName="subjectUserId" 
+            class="form-control" 
+            [class.error]="hasError('subjectUserId')">
+            <option [ngValue]="null" disabled>Izaberite korisnika kome se izdaje sertifikat...</option>
+            <option *ngFor="let subject of availableSubjects" [ngValue]="subject.id">
+              {{ subject.role }} - {{ subject.name }} {{ subject.surname }}
+            </option>
+          </select>
+          <span class="error-message" *ngIf="hasError('subjectUserId')">
+            Morate izabrati korisnika.
+          </span>
         </div>
-    </div>
+
+
+        <div class="form-group" *ngIf="isCaUser && myTemplates.length > 0">
+          <label>Šablon Sertifikata</label>
+          <div class="template-selection-wrapper">
+              <button type="button" class="btn-choose-template" (click)="openTemplateModal()">
+                  {{ selectedTemplate ? 'Izmenite Šablon' : 'Izaberite Šablon...' }}
+              </button>
+              <!-- Prikazujemo ime izabranog šablona i dugme za resetovanje -->
+              <div *ngIf="selectedTemplate" class="selected-template-info">
+                  <span>"{{ selectedTemplate.templateName }}"</span>
+                  <button type="button" class="btn-clear-template" (click)="clearTemplateSelection()" title="Ukloni šablon">&times;</button>
+              </div>
+          </div>
     <small class="form-hint">Izborom šablona automatski ćete popuniti i zaključati određena polja.</small>
 </div>
         

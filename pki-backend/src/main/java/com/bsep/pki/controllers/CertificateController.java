@@ -2,6 +2,7 @@ package com.bsep.pki.controllers;
 
 
 import com.bsep.pki.dtos.IssuerDto;
+import com.bsep.pki.dtos.UserSubjectDto;
 import com.bsep.pki.models.Certificate;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/certificates")
@@ -96,5 +98,25 @@ public class CertificateController {
     public ResponseEntity<List<IssuerDto>> getAvailableIssuers() {
         List<IssuerDto> issuers = certificateService.getPotentialIssuers();
         return ResponseEntity.ok(issuers);
+    }
+
+    @GetMapping("/potential-subjects")
+    public ResponseEntity<List<UserSubjectDto>> getPotentialCertificateSubjects() {
+        List<User> users = userService.findPotentialCertificateSubjects();
+
+        List<UserSubjectDto> potentialSubjectsDto = users.stream()
+                .map(this::mapToUserSubjectDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(potentialSubjectsDto);
+    }
+
+    private UserSubjectDto mapToUserSubjectDto(User user) {
+        return new UserSubjectDto(
+                user.getId(),
+                user.getName(),
+                user.getSurname(),
+                user.getRole().toString()
+        );
     }
 }

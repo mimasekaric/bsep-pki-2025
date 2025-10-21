@@ -1,11 +1,9 @@
-// issue-certificate.component.ts
-
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CertificateService, IssuerDto } from '../../services/certificate.service';
+import { CertificateService, IssuerDto, SubjectDto } from '../../services/certificate.service';
 import { AuthService, User } from 'src/app/services/auth.service';
-import { from, Subscription } from 'rxjs';
+import { from, map, Observable, of, Subscription, switchMap } from 'rxjs';
 import { CertificateTemplateService, TemplateInfoDTO } from '../../services/template.service';
 
 type CertificateType = 'ROOT' | 'INTERMEDIATE' | 'END_ENTITY';
@@ -30,6 +28,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   issuerValidFromDate: Date | null = null;
   issuerValidToDate: Date | null = null;
   isCaUser = false;
+  availableSubjects: SubjectDto[] = [];
 
   private currentUserId: number | null = null;
   private userSubscription: Subscription;
@@ -99,6 +98,19 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     
     this.initForm();
     this.loadIssuers(); 
+    this.loadPotentialSubjects();
+  }
+
+  loadPotentialSubjects(): void {
+    this.certificateService.getPotentialSubjects().subscribe({
+      next: (subjects) => {
+        this.availableSubjects = subjects;
+      },
+      error: (err) => {
+        console.error('Greška pri učitavanju liste subjekata:', err);
+        this.errorMessage = 'Greška pri učitavanju liste korisnika kojima se može izdati sertifikat.';
+      }
+    });
   }
 
   loadMyTemplates(): void {
@@ -133,6 +145,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
 
   initForm(): void {
     this.certificateForm = this.fb.group({
+      subjectUserId: [null],
       commonName: ['', [Validators.required]],
       organization: ['', [Validators.required]],
       organizationalUnit: ['', [Validators.required]],
@@ -223,13 +236,19 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     }
 
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
+    const subjectUserControl = this.certificateForm.get('subjectUserId'); 
+
     if (this.isRootCertificate) {
       issuerControl?.clearValidators();
       issuerControl?.setValue(null);
+      subjectUserControl?.clearValidators();
+      subjectUserControl?.setValue(null);
     } else {
       issuerControl?.setValidators([Validators.required]);
+      subjectUserControl?.setValidators([Validators.required]);
     }
     issuerControl?.updateValueAndValidity();
+    subjectUserControl?.updateValueAndValidity(); 
     
     this.issuerValidFrom = '';
     this.issuerValidTo = '';
@@ -263,16 +282,25 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
     this.successMessage = '';
 
-    this.authService.fetchCurrentUserId().subscribe({
-      next: (userWithId) => {
-        if (!userWithId || !userWithId.id) {
-          this.errorMessage = "ID korisnika nije pronađen na serveru. Izdavanje je prekinuto.";
-          this.isLoading = false;
-          return;
-        }
+    const formValue = this.certificateForm.getRawValue();
 
-        const subjectUserIdToSend = userWithId.id.toString();
-        const formValue = this.certificateForm.getRawValue();
+    let subjectId$: Observable<string>;
+
+    if (this.isRootCertificate) {
+      subjectId$ = this.authService.fetchCurrentUserId().pipe(
+        map(userWithId => {
+          if (!userWithId || !userWithId.id) {
+            throw new Error("ID korisnika nije pronađen na serveru.");
+          }
+          return userWithId.id.toString();
+        })
+      );
+    } else {
+      subjectId$ = of(formValue.subjectUserId);
+    }
+    
+    subjectId$.pipe(
+      switchMap(subjectUserIdToSend => {
         const toSnakeCase = (str: string) => str.replace(/[A-Z]/g, letter => `_${letter}`).toUpperCase();
 
         let certificateType: CertificateType;
@@ -287,7 +315,6 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
         }
 
         const certificateDto = {
-          templateId: this.selectedTemplate ? this.selectedTemplate.id : null,
           commonName: formValue.commonName,
           organization: formValue.organization,
           organizationalUnit: formValue.organizationalUnit,
@@ -296,7 +323,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           validFrom: new Date(formValue.validFrom).toISOString(),
           validTo: new Date(formValue.validTo).toISOString(),
           issuerSerialNumber: this.isRootCertificate ? null : formValue.issuerSerialNumber,
-          subjectUserId: subjectUserIdToSend,
+          subjectUserId: subjectUserIdToSend, // KORISTIMO ODREĐENI ID
           certificateType: certificateType, 
           keyUsages: Object.keys(formValue.keyUsage).filter(key => formValue.keyUsage[key]).map(key => toSnakeCase(key)),
           extendedKeyUsages: Object.keys(formValue.extendedKeyUsage).filter(key => formValue.extendedKeyUsage[key]).map(key => toSnakeCase(key)),
@@ -309,26 +336,23 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
           ? this.certificateService.issueRootCertificate(certificateDto)
           : this.certificateService.issueCertificate(certificateDto);
 
-        request.subscribe({
-          next: (response) => {
-            this.successMessage = 'Sertifikat je uspešno izdat!';
-            this.isLoading = false;
-            
-            setTimeout(() => {
-              this.successMessage = '';
-              this.isRootCertificate = false;
-              this.initForm(); 
-              this.loadIssuers();
-            }, 2500);
-          },
-          error: (error) => {
-            this.errorMessage = error.error?.message || error.error || 'Došlo je do neočekivane greške.';
-            this.isLoading = false;
-          }
-        });
+        return request;
+      })
+    ).subscribe({
+      next: (response) => {
+        this.successMessage = 'Sertifikat je uspešno izdat!';
+        this.isLoading = false;
+        
+        setTimeout(() => {
+          this.successMessage = '';
+          this.isRootCertificate = false;
+          this.initForm(); 
+          this.loadIssuers();
+          this.loadPotentialSubjects();
+        }, 2500);
       },
-      error: (err) => {
-        this.errorMessage = "Greška pri dobavljanju podataka o korisniku. Proverite da li ste ulogovani.";
+      error: (error) => {
+        this.errorMessage = error.error?.message || error.error || 'Došlo je do neočekivane greške.';
         this.isLoading = false;
       }
     });
