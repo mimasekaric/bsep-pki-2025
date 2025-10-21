@@ -2,9 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-// Kreiramo interfejs za tipizaciju podataka
-export interface CertificateTemplate {
-  id: number;
+export interface TemplateCreateDTO {
   templateName: string;
   issuerSerialNumber: string;
   commonNameRegex: string;
@@ -22,7 +20,7 @@ export class CertificateTemplateService {
 
   constructor(private http: HttpClient) { }
 
-  createTemplate(templateData: CertificateTemplate): Observable<string> { 
+  createTemplate(templateData: TemplateCreateDTO): Observable<string> { 
     return this.http.post(this.apiUrl, templateData, { responseType: 'text' });
   }
 }

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormArray } from '@angular/forms';
 import { Router } from '@angular/router';
-import { CertificateTemplateService, TemplateCreateDTO } from '../../services/certificate-template.service';
+import { CertificateTemplateService, TemplateCreateDTO } from '../../services/template.service';
 import { CertificateService, IssuerDto } from '../../services/certificate.service';
 @Component({
   selector: 'app-template',
@@ -79,41 +79,44 @@ export class TemplateComponent implements OnInit {
   }
 
   onSubmit(): void {
-    this.errorMessage = null;
-    this.successMessage = null;
-    
-    if (this.templateForm.invalid) {
-      this.templateForm.markAllAsTouched();
-      return;
-    }
-
-    this.isLoading = true;
-    const rawValue = this.templateForm.getRawValue();
-
-    const payload: TemplateCreateDTO = {
-      templateName: rawValue.templateName,
-      issuerSerialNumber: rawValue.issuerSerialNumber,
-      commonNameRegex: rawValue.commonNameRegex,
-      sanRegex: rawValue.sanRegex,
-      ttlDays: rawValue.ttlDays,
-      keyUsage: this.getSelectedValues(rawValue.keyUsage, this.keyUsageOptions),
-      extendedKeyUsage: this.getSelectedValues(rawValue.extendedKeyUsage, this.extendedKeyUsageOptions)
-    };
-    
-    this.templateService.createTemplate(payload).subscribe({
-      next: () => {
-        this.isLoading = false;
-        this.successMessage = `Šablon "${payload.templateName}" je uspešno kreiran!`;
-        this.templateForm.reset({ ttlDays: 365 }); // Resetuj formu na početne vrednosti
-        // this.router.navigate(['/lista-sablona']); // Opciono
-      },
-      error: (err: any) => {
-        this.isLoading = false;
-        this.errorMessage = err.error?.message || 'Došlo je do greške prilikom kreiranja šablona.';
-        console.error(err);
-      }
-    });
+  this.errorMessage = null;
+  this.successMessage = null;
+  
+  if (this.templateForm.invalid) {
+    this.templateForm.markAllAsTouched();
+    return;
   }
+
+  this.isLoading = true;
+  const rawValue = this.templateForm.getRawValue();
+
+  const payload: TemplateCreateDTO = {
+    templateName: rawValue.templateName,
+    issuerSerialNumber: rawValue.issuerSerialNumber,
+    commonNameRegex: rawValue.commonNameRegex,
+    sanRegex: rawValue.sanRegex,
+    ttlDays: rawValue.ttlDays,
+    keyUsage: this.getSelectedValues(rawValue.keyUsage, this.keyUsageOptions),
+    extendedKeyUsage: this.getSelectedValues(rawValue.extendedKeyUsage, this.extendedKeyUsageOptions)
+  };
+  
+  this.templateService.createTemplate(payload).subscribe({
+    next: (response: string) => { 
+      this.isLoading = false;
+      this.successMessage = response; 
+      this.templateForm.reset({ ttlDays: 365 });
+    },
+    error: (err: any) => {
+      this.isLoading = false;
+      if (err.status === 201 && err.error?.text) {
+        this.successMessage = err.error.text;
+      } else {
+        this.errorMessage = err.error?.message || 'Došlo je do greške prilikom kreiranja šablona.';
+      }
+      console.error(err);
+    }
+  });
+}
 
   private getSelectedValues(formArrayValues: boolean[], options: { key: string }[]): string[] {
     return formArrayValues

@@ -13,4 +13,6 @@ public interface CertificateTemplateRepository extends JpaRepository<Certificate
     List<CertificateTemplate> findByIssuerSerialNumber(String issuerSerialNumber);
 
     Optional<CertificateTemplate> findByTemplateName(String templateName);
+
+    List<CertificateTemplate> findByOwnerEmail(String ownerEmail);
 }
