@@ -18,6 +18,13 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     List<Certificate> findByIssuerSerialNumber(String issuerSerialNumber);
 
+    List<Certificate> findByTypeInAndRevokedFalseAndValidToAfter(List<CertificateType> types, LocalDateTime now);
+    List<Certificate> findByOwnerIdAndTypeInAndRevokedFalseAndValidToAfter(
+            UUID ownerId,
+            List<CertificateType> types,
+            LocalDateTime now
+    );
+
     @Query("SELECT c FROM Certificate c WHERE c.type IN :caTypes AND c.revoked = false AND c.validTo > :currentDate")
     List<Certificate> findAllActiveCaCertificates(
             @Param("caTypes") List<CertificateType> caTypes,
@@ -42,4 +49,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
             @Param("caTypes") List<CertificateType> caTypes,
             @Param("now") LocalDateTime now
     );
+
+    List<Certificate> findByOwnerIdAndType(UUID ownerId, CertificateType type);
+
 }

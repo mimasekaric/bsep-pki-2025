@@ -1,0 +1,25 @@
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 16px;
+}
+
+.error-container {
+  padding: 16px;
+}
+
+.error-text {
+  color: #ef4444;
+  margin: 0;
+}
+
+.dialog-description {
+  margin-bottom: 16px;
+  color: #6b7280;
+}
+
+.full-width {
+  width: 100%;
+}

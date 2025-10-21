@@ -1,0 +1,35 @@
+<nav class="app-navbar">
+  <div class="navbar-container">
+    <!-- Brend/Logo -->
+    <a class="navbar-brand" routerLink="/">PKI App</a>
+
+    <!-- Linkovi -->
+    <div class="navbar-links">
+      <!-- Levi deo -->
+      <ul class="nav-group">
+        <li *ngIf="isLoggedIn && !isAdmin && !isCaUser && !mustChangePassword">
+          <a routerLink="/csr/upload" routerLinkActive="active-link">Kreiraj CSR</a>
+        </li>
+        <li *ngIf="isLoggedIn && (isAdmin || isCaUser) && !mustChangePassword">
+          <a routerLink="/csr/list-pending" routerLinkActive="active-link">CSR Zahtevi</a>
+        </li>
+         <li *ngIf="isLoggedIn">
+          <a routerLink="/certificates" routerLinkActive="active-link">Moji Sertifikati</a>
+        </li>
+      </ul>
+
+      <!-- Desni deo -->
+      <ul class="nav-group">
+        <li *ngIf="!isLoggedIn">
+          <a routerLink="/login" routerLinkActive="active-link">Login</a>
+        </li>
+        <li *ngIf="!isLoggedIn">
+          <a routerLink="/register" routerLinkActive="active-link">Register</a>
+        </li>
+        <li *ngIf="isLoggedIn">
+          <a (click)="logout()" style="cursor: pointer;">Logout</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>

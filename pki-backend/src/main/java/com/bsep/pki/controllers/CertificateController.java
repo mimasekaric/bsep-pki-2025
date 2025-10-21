@@ -3,6 +3,7 @@ package com.bsep.pki.controllers;
 
 import com.bsep.pki.dtos.IssuerDto;
 import com.bsep.pki.dtos.UserSubjectDto;
+import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.Certificate;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
@@ -118,5 +119,47 @@ public class CertificateController {
                 user.getSurname(),
                 user.getRole().toString()
         );
+    }
+    
+    @GetMapping("/ca")
+    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates(Principal principal) {
+        String ca_user_mail = principal.getName();
+        User ca_user = userService.findByEmail(ca_user_mail);
+        UUID userId = ca_user.getId();
+        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificatesForUser(userId);
+        return ResponseEntity.ok(caCerts);
+    }
+
+
+    @GetMapping("/adminCertificates")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<List<CertificateDetailsDTO>> getAllCertificates() {
+        List<CertificateDetailsDTO> allCerts = certificateService.getAllCertificates();
+        return ResponseEntity.ok(allCerts);
+    }
+
+    @GetMapping("/endEntityCertificates")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CertificateDetailsDTO>> getUserEndEntityCertificates(
+            Principal principal
+    ) {
+
+        User loggedInUser = userService.findByEmail(principal.getName());
+
+
+        List<CertificateDetailsDTO> userCerts = certificateService.getEndEntityCertificatesForUser(loggedInUser.getId());
+        return ResponseEntity.ok(userCerts);
+    }
+    @GetMapping("/caCertificates")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CertificateDetailsDTO>> getCaCertificates(
+            Principal principal
+    ) {
+
+        User loggedInUser = userService.findByEmail(principal.getName());
+
+
+        List<CertificateDetailsDTO> userCerts = certificateService.getCaCertificatesForUser(loggedInUser.getId());
+        return ResponseEntity.ok(userCerts);
     }
 }

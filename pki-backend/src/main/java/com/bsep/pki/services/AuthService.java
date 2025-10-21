@@ -4,6 +4,7 @@ import com.bsep.pki.dtos.requests.LoginRequestDTO;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
+import com.bsep.pki.models.User;
 import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.services.interfaces.IUserService;
 import com.bsep.pki.util.AuditLog;
@@ -31,16 +32,18 @@ public class AuthService implements IAuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
     private final IUserService userService;
+    private final RecaptchaService recaptchaService;
 
     @Value("${app.jwt.expiration}")
     private long jwtExpirySeconds;
 
     public AuthService(AuthenticationManager authenticationManager,
                        JwtEncoder jwtEncoder,
-                       IUserService userService) {
+                       IUserService userService, RecaptchaService recaptchaService) {
         this.authenticationManager = authenticationManager;
         this.jwtEncoder = jwtEncoder;
         this.userService = userService;
+        this.recaptchaService = recaptchaService;
     }
 
     @Override
@@ -49,6 +52,14 @@ public class AuthService implements IAuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
         );
+        if (!recaptchaService.validateRecaptcha(loginRequest.getRecaptchaToken())) {
+            throw new SecurityException("reCAPTCHA validation failed.");
+        }
+
+
+        String email = authentication.getName();
+        User user = userService.findByEmail(email);
+        boolean mustChange = user.isMustChangePassword();
 
         Instant now = Instant.now();
         JwtClaimsSet claims = JwtClaimsSet.builder()
@@ -59,6 +70,7 @@ public class AuthService implements IAuthService {
                 .claim("scope", authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.joining(" ")))
+                .claim("mustChangePassword", mustChange)
                 .build();
 
         JwsHeader jwsHeader = JwsHeader.with(MacAlgorithm.HS256).build();
@@ -67,7 +79,7 @@ public class AuthService implements IAuthService {
 
         String token = this.jwtEncoder.encode(encoderParameters).getTokenValue();
 
-        return ResponseEntity.ok(new LoginResponseDTO(token, authentication.getName()));
+        return ResponseEntity.ok(new LoginResponseDTO(token, authentication.getName(),mustChange));
     }
 
     @Override

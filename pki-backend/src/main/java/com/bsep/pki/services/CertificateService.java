@@ -44,6 +44,11 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -81,7 +86,7 @@ public class CertificateService {
                 subjectAndIssuer, subjectAndIssuer,
                 keyPair.getPublic(), keyPair.getPrivate(),
                 dto.getValidFrom(), dto.getValidTo(),
-                serialNumber, true,  dto
+                serialNumber, true, dto
         );
 
         String alias = serialNumber.toString();
@@ -198,8 +203,6 @@ public class CertificateService {
                 System.err.println("Verifikacija lanca neuspešna: " + ex.getMessage());
                 throw ex;
             }*/
-
-
 
 
             ks.setKeyEntry(alias, subjectKeyPair.getPrivate(), password.toCharArray(), newChain);
@@ -408,6 +411,327 @@ public class CertificateService {
         }
     }
 
+
+
+    /*public java.security.cert.Certificate[] loadCertificateChainById(Long certificateId) {
+        try {
+            Certificate certificate = certificateRepository.findById(certificateId)
+                    .orElseThrow(() -> new EntityNotFoundException("Certificate not found with ID: " + certificateId));
+
+            Keystore keystore = keystoreRepository.findById(certificate.getKeystore().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Keystore not found for certificate ID: " + certificateId));
+
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            String decryptedPassword = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+            try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystore.getId() + ".p12")) {
+                ks.load(fis, decryptedPassword.toCharArray());
+            }
+
+            // ==================================================================================
+            // =========== DETALJAN DEBUG ISPIS SADRŽAJA KEYSTORE-a =============================
+            // ==================================================================================
+            System.out.println("\n--- DEBUG: Analiza sadržaja Keystore fajla (ID: " + keystore.getId() + ") ---");
+
+            X509Certificate targetCert = (X509Certificate) ks.getCertificate(certificate.getAlias());
+            if (targetCert == null) {
+                System.err.println("!!!! GREŠKA: Traženi sertifikat (alias: " + certificate.getAlias() + ") nije pronađen u Keystore-u!");
+            } else {
+                System.out.println("-> Tražim lanac za sertifikat sa Subject-om: " + targetCert.getSubjectX500Principal().getName());
+                System.out.println("-> Njegov Issuer je: " + targetCert.getIssuerX500Principal().getName());
+            }
+
+            System.out.println("\n--- Lista SVIH sertifikata u Keystore-u ---");
+            Enumeration<String> aliases = ks.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                java.security.cert.Certificate certInStoreRaw = ks.getCertificate(alias);
+                if (certInStoreRaw instanceof X509Certificate) {
+                    X509Certificate certInStore = (X509Certificate) certInStoreRaw;
+                    System.out.println("-------------------------------------");
+                    System.out.println("Alias: " + alias);
+                    System.out.println("  -> Subject: " + certInStore.getSubjectX500Principal().getName());
+                    System.out.println("  -> Issuer:  " + certInStore.getIssuerX500Principal().getName());
+                    System.out.println("  -> Serial#: " + certInStore.getSerialNumber());
+                } else {
+                    System.out.println("-------------------------------------");
+                    System.out.println("Alias: " + alias + " (Nije X.509 sertifikat, tip: " + (certInStoreRaw != null ? certInStoreRaw.getClass().getName() : "null") + ")");
+                }
+            }
+            System.out.println("--- KRAJ LISTE SERTIFIKATA ---\n");
+            // ==================================================================================
+
+            // Get the complete certificate chain
+            java.security.cert.Certificate[] chain = ks.getCertificateChain(certificate.getAlias());
+
+            System.out.println("Rezultat poziva ks.getCertificateChain(): " + (chain != null ? "Lanac dužine " + chain.length : "null"));
+
+            if (chain == null || chain.length <= 1) {
+                System.err.println("!!!! UPOZORENJE: Lanac nije uspešno rekonstruisan! Proverite da li se Issuer traženog sertifikata poklapa sa Subject-om nekog drugog sertifikata u listi iznad.");
+            }
+
+            if (chain != null) {
+                for (int i = 0; i < chain.length; i++) {
+                    if (chain[i] instanceof X509Certificate) {
+                        X509Certificate x509Cert = (X509Certificate) chain[i];
+                        System.out.println("Dobijeni Lanac[" + i + "] Subject: " + x509Cert.getSubjectX500Principal().getName());
+                    }
+                }
+            }
+
+            if (chain == null || chain.length == 0) {
+                System.out.println("No certificate chain found, trying to get single certificate");
+                X509Certificate cert = (X509Certificate) ks.getCertificate(certificate.getAlias());
+                if (cert != null) {
+                    System.out.println("Found single certificate: " + cert.getSubjectX500Principal().getName());
+                    // ... (ostatak vaše fallback logike)
+                    return new java.security.cert.Certificate[]{cert};
+                }
+                throw new EntityNotFoundException("Certificate not found in keystore with alias: " + certificate.getAlias());
+            }
+
+            System.out.println("=== End Certificate Chain Debug ===");
+            return chain;
+        } catch (Exception e) {
+            System.err.println("Failed to load certificate chain: " + e.getMessage());
+            e.printStackTrace();
+            throw new EntityNotFoundException("Failed to load certificate chain from keystore", e);
+        }
+    }*/
+
+
+    /*public java.security.cert.Certificate[] loadCertificateChainById(Long certificateId) {
+        try {
+            Certificate certificate = certificateRepository.findById(certificateId)
+                    .orElseThrow(() -> new EntityNotFoundException("Certificate not found with ID: ".concat(String.valueOf(certificateId))));
+
+            Keystore keystore = keystoreRepository.findById(certificate.getKeystore().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Keystore not found for certificate ID: ".concat(String.valueOf(certificateId))));
+
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            String decryptedPassword = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+            try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystore.getId() + ".p12")) {
+                ks.load(fis, decryptedPassword.toCharArray());
+            }
+
+            // ==================================================================================
+            // =========== DEBUG BLOK 1: ISPIS SADRŽAJA KEYSTORE-a ==============================
+            // ==================================================================================
+            System.out.println("\n--- DEBUG: Analiza sadržaja Keystore fajla (ID: " + keystore.getId() + ") ---");
+
+            System.out.println("\n--- Lista SVIH sertifikata u Keystore-u ---");
+            Enumeration<String> aliases = ks.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                java.security.cert.Certificate certInStoreRaw = ks.getCertificate(alias);
+                if (certInStoreRaw instanceof X509Certificate) {
+                    X509Certificate certInStore = (X509Certificate) certInStoreRaw;
+                    System.out.println("-------------------------------------");
+                    System.out.println("Alias: " + alias);
+                    System.out.println("  -> Subject: " + certInStore.getSubjectX500Principal().getName());
+                    System.out.println("  -> Issuer:  " + certInStore.getIssuerX500Principal().getName());
+                }
+            }
+            System.out.println("--- KRAJ LISTE SERTIFIKATA ---\n");
+            // ==================================================================================
+
+
+            // ==================================================================================
+            // =========== DEBUG BLOK 2: RUČNA PROVERA POTPISA ==================================
+            // ==================================================================================
+            System.out.println("\n--- DEBUG: RUČNA PROVERA POTPISA ---");
+            try {
+                // 1. Uzmi naš ciljani (End-Entity) sertifikat
+                X509Certificate targetCert = (X509Certificate) ks.getCertificate(certificate.getAlias());
+                if (targetCert == null) {
+                    System.err.println("!!!! GREŠKA: Ciljani sertifikat (alias: " + certificate.getAlias() + ") nije pronađen!");
+                } else {
+                    System.out.println("Ciljani sertifikat (Subject): " + targetCert.getSubjectX500Principal().getName());
+                    System.out.println("Njegov Issuer je: " + targetCert.getIssuerX500Principal().getName());
+
+                    // 2. Pronađi sertifikat izdavaoca u keystore-u po imenu
+                    String issuerAlias = ks.getCertificateAlias(targetCert.getIssuerX500Principal());
+
+                    if (issuerAlias == null) {
+                        System.err.println("!!!! GREŠKA: Roditelj (Issuer) sa tim imenom nije pronađen u Keystore-u!");
+                    } else {
+                        System.out.println("Pronađen potencijalni roditelj sa aliasom: " + issuerAlias);
+                        X509Certificate issuerCert = (X509Certificate) ks.getCertificate(issuerAlias);
+                        System.out.println("Njegov Subject je: " + issuerCert.getSubjectX500Principal().getName());
+
+                        // 3. POKUŠAJ VERIFIKACIJE POTPISA
+                        System.out.println("Pokušavam da verifikujem potpis 'deteta' sa javnim ključem 'roditelja'...");
+                        targetCert.verify(issuerCert.getPublicKey());
+                        System.out.println("===> USPEH! Ručna verifikacija potpisa je prošla.");
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("!!!! GREŠKA PRI RUČNOJ VERIFIKACIJI POTPISA: " + e.getClass().getName() + " - " + e.getMessage());
+            }
+            System.out.println("--- KRAJ RUČNE PROVERE ---\n");
+            // ==================================================================================
+
+            // Originalni poziv
+            java.security.cert.Certificate[] chain = ks.getCertificateChain(certificate.getAlias());
+
+            System.out.println("Rezultat poziva ks.getCertificateChain(): " + (chain != null ? "Lanac dužine " + chain.length : "null"));
+
+            if (chain == null || chain.length <= 1) {
+                System.err.println("!!!! UPOZORENJE: Lanac nije uspešno rekonstruisan!");
+            }
+
+            // Ostatak vaše originalne fallback logike
+            if (chain == null || chain.length == 0) {
+                System.out.println("No certificate chain found, returning single certificate as fallback.");
+                java.security.cert.Certificate cert = ks.getCertificate(certificate.getAlias());
+                if (cert != null) {
+                    return new java.security.cert.Certificate[]{cert};
+                }
+                throw new EntityNotFoundException("Certificate not found in keystore with alias: " + certificate.getAlias());
+            }
+
+            System.out.println("=== End Certificate Chain Debug ===");
+            return chain;
+        } catch (Exception e) {
+            System.err.println("Failed to load certificate chain: " + e.getMessage());
+            e.printStackTrace();
+            throw new EntityNotFoundException("Failed to load certificate chain from keystore", e);
+        }
+    }*/
+
+    /*public java.security.cert.Certificate[] loadCertificateChainById(Long certificateId) {
+        try {
+            Certificate certificate = certificateRepository.findById(certificateId)
+                    .orElseThrow(() -> new EntityNotFoundException("Certificate not found with ID: " + certificateId));
+
+            Keystore keystore = keystoreRepository.findById(certificate.getKeystore().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Keystore not found for certificate ID: " + certificateId));
+
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            String decryptedPassword = cryptoService.decryptAES(keystore.getEncryptedPassword());
+
+            try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystore.getId() + ".p12")) {
+                ks.load(fis, decryptedPassword.toCharArray());
+            }
+
+            // ==================================================================================
+            // =========== DEBUG BLOK 1: ISPIS SADRŽAJA KEYSTORE-a ==============================
+            // ==================================================================================
+            System.out.println("\n--- DEBUG: Analiza sadržaja Keystore fajla (ID: " + keystore.getId() + ") ---");
+
+            System.out.println("\n--- Lista SVIH sertifikata u Keystore-u ---");
+            Enumeration<String> aliasesEnum = ks.aliases();
+            while (aliasesEnum.hasMoreElements()) {
+                String alias = aliasesEnum.nextElement();
+                java.security.cert.Certificate certInStoreRaw = ks.getCertificate(alias);
+                if (certInStoreRaw instanceof X509Certificate) {
+                    X509Certificate certInStore = (X509Certificate) certInStoreRaw;
+                    System.out.println("-------------------------------------");
+                    System.out.println("Alias: " + alias);
+                    System.out.println("  -> Subject: " + certInStore.getSubjectX500Principal().getName());
+                    System.out.println("  -> Issuer:  " + certInStore.getIssuerX500Principal().getName());
+                }
+            }
+            System.out.println("--- KRAJ LISTE SERTIFIKATA ---\n");
+            // ==================================================================================
+
+
+            // ==================================================================================
+            // =========== DEBUG BLOK 2: RUČNA PROVERA POTPISA ==================================
+            // ==================================================================================
+            System.out.println("\n--- DEBUG: RUČNA PROVERA CELOG LANCA ---");
+            try {
+                // Počinjemo od ciljanog sertifikata
+                X509Certificate currentCert = (X509Certificate) ks.getCertificate(certificate.getAlias());
+                int chainLevel = 0;
+
+                while (currentCert != null) {
+                    System.out.println("-------------------------------------");
+                    System.out.println("Provera lanca na nivou [" + chainLevel + "]");
+                    System.out.println("  -> Subject: " + currentCert.getSubjectX500Principal().getName());
+
+                    // --- PROVERA EKSTENZIJA ---
+                    boolean isCa = currentCert.getBasicConstraints() > -1;
+                    boolean canSignCerts = false;
+                    boolean[] keyUsage = currentCert.getKeyUsage();
+                    if (keyUsage != null && keyUsage.length > 5) {
+                        canSignCerts = keyUsage[5]; // keyCertSign je na 5. poziciji
+                    }
+                    System.out.println("  -> Basic Constraints (isCA): " + isCa);
+                    System.out.println("  -> Key Usage (keyCertSign): " + canSignCerts);
+                    // -------------------------
+
+                    // Proveravamo da li je samopotpisan (kraj lanca)
+                    if (currentCert.getSubjectX500Principal().equals(currentCert.getIssuerX500Principal())) {
+                        System.out.println("Sertifikat je samopotpisan. Kraj lanca.");
+                        break;
+                    }
+
+                    // Pronalazimo roditelja
+                    X509Certificate parentCert = null;
+                    Enumeration<String> searchAliases = ks.aliases();
+                    while (searchAliases.hasMoreElements()) {
+                        String alias = searchAliases.nextElement();
+                        X509Certificate potentialParent = (X509Certificate) ks.getCertificate(alias);
+                        if (potentialParent.getSubjectX500Principal().equals(currentCert.getIssuerX500Principal())) {
+                            parentCert = potentialParent;
+                            break;
+                        }
+                    }
+
+                    if (parentCert == null) {
+                        System.err.println("!!!! GREŠKA: Roditelj nije pronađen u Keystore-u!");
+                        break;
+                    }
+
+                    // Verifikujemo potpis
+                    System.out.println("Pokušavam verifikaciju sa roditeljem: " + parentCert.getSubjectX500Principal().getName());
+                    currentCert.verify(parentCert.getPublicKey());
+                    System.out.println("===> USPEH! Potpis je validan.");
+
+                    // Prelazimo na sledeći nivo
+                    currentCert = parentCert;
+                    chainLevel++;
+                }
+            } catch (Exception e) {
+                System.err.println("!!!! GREŠKA PRI RUČNOJ VERIFIKACIJI LANCA: " + e.getClass().getName() + " - " + e.getMessage());
+            }
+            System.out.println("--- KRAJ RUČNE PROVERE ---\n");
+            // ==================================================================================
+
+            // Originalni poziv
+            java.security.cert.Certificate[] chain = ks.getCertificateChain(certificate.getAlias());
+
+            System.out.println("Rezultat poziva ks.getCertificateChain(): " + (chain != null ? "Lanac dužine " + chain.length : "null"));
+
+            // Ostatak metode...
+            if (chain == null || chain.length == 0) {
+                System.out.println("No certificate chain found, returning single certificate as fallback.");
+                java.security.cert.Certificate cert = ks.getCertificate(certificate.getAlias());
+                if (cert != null) {
+                    return new java.security.cert.Certificate[]{cert};
+                }
+                throw new EntityNotFoundException("Certificate not found in keystore with alias: " + certificate.getAlias());
+            }
+
+            System.out.println("=== End Certificate Chain Debug ===");
+            return chain;
+        } catch (Exception e) {
+            System.err.println("Failed to load certificate chain: " + e.getMessage());
+            e.printStackTrace();
+            throw new EntityNotFoundException("Failed to load certificate chain from keystore", e);
+        }
+    }*/
+
+
+
+
+
+
+
+
+
     @Transactional
     @AuditLog(action = "REVOKE_CERTIFICATE")
     public void revokeCertificate(String serialNumber, String reason, UUID requestingUserId) throws Exception {
@@ -445,23 +769,24 @@ public class CertificateService {
             }
         }
 
-         crlService.regenerateCrl(certificate.getIssuerSerialNumber());
+        crlService.regenerateCrl(certificate.getIssuerSerialNumber());
     }
-
 
 
     @Transactional
     public CertificateDetailsDTO issueCertificateFromCsr(
-            Long csrId,
-            ApproveCsrDTO dto
+            Long csrId, ApproveCsrDTO signingCertificateSerialNumber
     ) throws Exception {
 
-        // 1. Učitavanje podataka
+
         CSR csr = csrRepository.findById(csrId)
                 .orElseThrow(() -> new ResourceNotFoundException("CSR not found with ID: " + csrId));
 
-        // DTO sada sadrži serijski broj izdavaoca
-        Certificate issuerCertData = validateIssuer(dto.getIssuerSerialNumber());
+
+
+        LocalDateTime validFrom = csr.getRequestedValidFrom();
+        LocalDateTime validTo = csr.getRequestedValidTo();
+        Certificate issuerCertData = validateIssuer(signingCertificateSerialNumber.getSigningCertificateSerialNumber());
         Keystore keystore = issuerCertData.getKeystore();
         String password = cryptoService.decryptAES(keystore.getEncryptedPassword());
         PrivateKey issuerPrivateKey = keystoreService.getPrivateKey(keystore.getId(), password.toCharArray(), issuerCertData.getAlias());
@@ -469,39 +794,68 @@ public class CertificateService {
                 keystore.getId(), password.toCharArray(), issuerCertData.getAlias()
         )[0];
 
-        // 2. Parsiranje i validacija CSR-a
+
         PKCS10CertificationRequest parsedCsr = csrService.parseCsr(csr.getPemContent());
         csrService.validateCsr(parsedCsr);
 
-        // 3. Provera validnosti datuma iz DTO
+
         /*if (dto.getValidFrom().isBefore(issuerCertX509.getNotBefore().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime()) ||
                 dto.getValidTo().isAfter(issuerCertX509.getNotAfter().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime().toZonedDateTime())) {
             throw new CertificateValidationException("Requested validity period is outside the issuer's validity period.");
         }*/
 
-        // 4. Ekstrakcija ključnih podataka iz CSR-a
+        //ZonedDateTime validFrom = csr.getRequestedValidFrom().atZone(ZoneId.systemDefault());
+        //ZonedDateTime validTo = csr.getRequestedValidTo().atZone(ZoneId.systemDefault());
+
+        // Dobijamo datume važenja iz entiteta sertifikata izdavaoca
+        LocalDateTime issuerValidFrom = issuerCertData.getValidFrom();
+        LocalDateTime issuerValidTo = issuerCertData.getValidTo();
+
+        if (validFrom.isBefore(issuerValidFrom) || validTo.isAfter(issuerValidTo)) {
+
+            csr.setStatus(CSR.CsrStatus.REJECTED);
+            csr.setRejectionReason("Requested validity period is outside the issuer's certificate validity.");
+            csrRepository.save(csr);
+            throw new CertificateValidationException("Requested validity period is outside the issuer's certificate validity. " +
+                    "Issuer is valid from " + issuerValidFrom + " to " + issuerValidTo);
+        }
+
+
+        Extensions requestedExtensions = csrService.getExtensionsFromCsr(parsedCsr);
+        try {
+
+            csrService.validateCsrExtensions(requestedExtensions, csr.getOwner());
+        } catch (SecurityException | IllegalArgumentException e) {
+
+            csr.setStatus(CSR.CsrStatus.REJECTED);
+            csr.setRejectionReason("Invalid extensions in CSR: " + e.getMessage());
+            csrRepository.save(csr);
+            throw e;
+        }
+
+
+
         JcaPKCS10CertificationRequest jcaCsr = new JcaPKCS10CertificationRequest(parsedCsr);
         PublicKey subjectPublicKey = jcaCsr.getPublicKey();
         X500Name subjectName = parsedCsr.getSubject(); // Subject ime se uzima iz CSR-a
         X500Name issuerName = X500Name.getInstance(issuerCertX509.getSubjectX500Principal().getEncoded());
 
-        Extensions requestedExtensions = csrService.getExtensionsFromCsr(parsedCsr);
+        //Extensions requestedExtensions = csrService.getExtensionsFromCsr(parsedCsr);
 
-        // 4. Kreiranje sertifikata
-        // Potrebna nam je nova metoda u fabrici
+
         X509Certificate newCert = certificateFactory.createCertificateFromCsrData(
                 subjectName,
                 issuerName,
                 subjectPublicKey,
                 issuerPrivateKey,
-                dto.getValidFrom(), // Datumi i dalje dolaze iz DTO-a
-                dto.getValidTo(),
+                validFrom,
+                validTo,
                 new BigInteger(128, new SecureRandom()),
                 issuerCertX509,
-                requestedExtensions // Prosleđujemo ekstenzije iz CSR-a
+                requestedExtensions
         );
 
-        // 6. Čuvanje u keystore (BEZ PRIVATNOG KLJUČA)
+
         String alias = newCert.getSerialNumber().toString();
         KeyStore ks = keystoreService.loadKeyStore(keystore.getId(), password.toCharArray());
 
@@ -517,7 +871,18 @@ public class CertificateService {
         return new CertificateDetailsDTO(certEntity);
     }
 
-    @AuditLog(action = "POTENTIAL_ISSUERS")
+    public List<CertificateDetailsDTO> getValidCaCertificatesForUser(UUID ownerId) {
+        List<CertificateType> caTypes = List.of(CertificateType.INTERMEDIATE);
+
+        return certificateRepository.findByOwnerIdAndTypeInAndRevokedFalseAndValidToAfter(
+                        ownerId, caTypes, LocalDateTime.now()
+                )
+                .stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+
+ 
     public List<IssuerDto> getPotentialIssuers() {
         try {
             Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -578,7 +943,47 @@ public class CertificateService {
             e.printStackTrace();
             throw e;
         }
+
+
     }
+
+    public List<CertificateDetailsDTO> getAllCertificates() {
+
+        List<Certificate> allCertificates = certificateRepository.findAll();
+        return allCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    public List<CertificateDetailsDTO> getEndEntityCertificatesForUser(UUID ownerId) {
+
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + ownerId));
+
+        List<Certificate> userCertificates = certificateRepository.findByOwnerIdAndType(
+                ownerId,
+                CertificateType.END_ENTITY
+        );
+
+        return userCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+    public List<CertificateDetailsDTO> getCaCertificatesForUser(UUID ownerId) {
+
+        userRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + ownerId));
+
+        List<Certificate> userCertificates = certificateRepository.findByOwnerIdAndType(
+                ownerId,
+                CertificateType.INTERMEDIATE
+        );
+
+        return userCertificates.stream()
+                .map(CertificateDetailsDTO::new)
+                .collect(Collectors.toList());
+    }
+
 
 
 }

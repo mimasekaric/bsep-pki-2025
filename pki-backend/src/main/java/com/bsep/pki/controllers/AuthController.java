@@ -4,6 +4,8 @@ import com.bsep.pki.dtos.requests.ForgotPasswordRequest;
 import com.bsep.pki.dtos.requests.LoginRequestDTO;
 import com.bsep.pki.dtos.requests.ResetPasswordRequest;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
+import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
+import com.bsep.pki.dtos.requests.ChangePasswordDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
 import com.bsep.pki.dtos.responses.UserIdResponseDTO;
 import com.bsep.pki.dtos.responses.UserOrganizationResponseDTO;
@@ -30,7 +32,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.UUID;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/auth")

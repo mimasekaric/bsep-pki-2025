@@ -18,6 +18,26 @@ import { AuthInterceptor } from '../app/inceptors/auth.inceptor';
 import { AuthService } from './services/auth.service';
 import {HTTP_INTERCEPTORS } from '@angular/common/http';
 import { TemplateSelectionModalComponent } from './components/template-selection-modal/template-selection-modal.component';
+import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
+import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { NavbarComponent } from './layout/navbar/navbar.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { ApproveDialogComponent } from './components/approve-dialog.component.ts/approve-dialog.component.ts.component';
+import { AdminComponent } from './components/admin/admin.component';
+import { ChangePasswordComponent } from './components/change-password/change-password.component';
+import { RejectDialogComponent } from './components/reject-dialog/reject-dialog.component';
+import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
+import { ParseDnPipe } from './pipes/parse-dn.pipe';
+import { RevokeDialogComponent } from './components/revoke-dialog/revoke-dialog.component';
+import {NgxCaptchaModule } from 'ngx-captcha';
+
+
 
 @NgModule({
   declarations: [
@@ -25,20 +45,40 @@ import { TemplateSelectionModalComponent } from './components/template-selection
     SplashScreenComponent,
     LoginComponent,
     RegisterComponent,
+    ApproveDialogComponent,
     EmailVerificationComponent,
     IssueCertificateComponent,
+    TokensComponent,
+    CsrUploadComponent,
+    CsrListComponent,
+    NavbarComponent,
+    AdminComponent,
+    ChangePasswordComponent,
+    RejectDialogComponent,
     ForgotPasswordComponent,
     ResetPasswordComponent,
     TokensComponent,
     TemplateComponent,
-    TemplateSelectionModalComponent
+    TemplateSelectionModalComponent,
+    CertificateListComponent,
+    ParseDnPipe,
+    RevokeDialogComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
     ReactiveFormsModule,
-    FormsModule
+    FormsModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+    BrowserAnimationsModule,
+    NgxCaptchaModule
+    
   ],
    providers: [
     AuthService, // Pruži AuthService ako ga koristiš za logout

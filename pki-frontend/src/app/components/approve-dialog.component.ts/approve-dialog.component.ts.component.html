@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>Odobravanje Zahteva #{{ data.csr.id }}</h2>
+
+<mat-dialog-content>
+  <div *ngIf="isLoading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Učitavanje vaših sertifikata...</p>
+  </div>
+
+  <div *ngIf="!isLoading && errorMessage" class="error-container">
+    <p class="error-text">{{ errorMessage }}</p>
+  </div>
+
+  <div *ngIf="!isLoading && !errorMessage">
+    <p class="dialog-description">Molimo izaberite sertifikat kojim želite da potpišete ovaj CSR:</p>
+    
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Vaši dostupni CA Sertifikati</mat-label>
+      <mat-select [(ngModel)]="selectedSigningCertSerial" name="signingCertSerial">
+        <mat-option value="" disabled>-- Izaberite sertifikat --</mat-option>
+        <mat-option *ngIf="availableSigningCerts.length === 0" disabled>
+          Nemate dostupnih CA sertifikata
+        </mat-option>
+        <mat-option *ngFor="let cert of availableSigningCerts" [value]="cert.serialNumber">
+          {{ cert.subjectDN }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Otkaži</button>
+  <button mat-raised-button color="primary" (click)="onConfirm()" 
+          [disabled]="!selectedSigningCertSerial || isLoading">
+    Potvrdi Odobrenje
+  </button>
+</mat-dialog-actions>

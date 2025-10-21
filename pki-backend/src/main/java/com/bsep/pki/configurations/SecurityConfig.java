@@ -39,21 +39,24 @@ public class SecurityConfig {
     private String jwtSecret;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder,   SessionValidationConfig sessionValidationFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtDecoder jwtDecoder,   SessionValidationConfig sessionValidationFilter,  PasswordChangeFilter passwordChangeFilter) throws Exception {
         http
                 .addFilterBefore(corsFilter(), UsernamePasswordAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**", "/verify-email").permitAll()
+                        .requestMatchers("/api/auth/**", "/verify-email", "/login").permitAll()
                         .requestMatchers("/api/certificates/**").permitAll()
-                        .requestMatchers("/api/csr/**","/{csrId}/approve").permitAll()
+                        //.requestMatchers("/api/csr/**","/{csrId}/approve").permitAll()
+                        .requestMatchers("/api/auth/create-ca-user").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder))
                 );
-        http.addFilterAfter(sessionValidationFilter, BearerTokenAuthenticationFilter.class);
+        //http.addFilterAfter(sessionValidationFilter, BearerTokenAuthenticationFilter.class);
+        http.addFilterAfter(passwordChangeFilter, BearerTokenAuthenticationFilter.class);
+        http.addFilterAfter(sessionValidationFilter, PasswordChangeFilter.class);
 
         return http.build();
     }

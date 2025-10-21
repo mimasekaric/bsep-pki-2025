@@ -1,0 +1,67 @@
+.app-navbar {
+  background-color: #2d1b69; /* Vaša tamno ljubičasta boja */
+  color: white;
+  padding: 16px 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Kontejner koji raspoređuje elemente */
+.navbar-container {
+  display: flex; /* KLJUČNO: Postavlja elemente u red */
+  justify-content: space-between; /* Gura brend levo, a linkove desno */
+  align-items: center; /* Vertikalno centrira sve */
+  width: 100%;
+}
+
+/* Brend/Logo */
+.navbar-brand {
+  font-size: 24px;
+  font-weight: 600;
+  color: white;
+  text-decoration: none;
+}
+
+/* Kontejner za sve grupe linkova */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 32px; /* Razmak između leve i desne grupe linkova */
+}
+
+/* Grupa linkova (<ul>) */
+.nav-group {
+  display: flex; /* KLJUČNO: Postavlja <li> elemente u red */
+  list-style-type: none; /* Uklanja tačkice ispred <li> */
+  margin: 0;
+  padding: 0;
+  gap: 24px; /* Razmak između pojedinačnih linkova */
+}
+
+/* Stil za linkove (<a>) */
+.nav-group a {
+  color: #d1c4e9; /* Svetlija ljubičasta */
+  text-decoration: none;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+/* Efekat na hover */
+.nav-group a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Stil za aktivni link */
+.nav-group a.active-link {
+  background-color: #8b45ff; /* Jarka ljubičasta */
+  color: white;
+  font-weight: 600;
+}
+
+/* Opciono: Sakrivanje mobilnog "hamburger" menija jer ga nismo implementirali u ovom CSS-u */
+/* Ako vam treba, logika je složenija i zahteva JavaScript */
+.navbar-toggler {
+  display: none;
+}

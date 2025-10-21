@@ -38,6 +38,7 @@
           </div>
           <p>Zaboravili ste lozinku? <a (click)="goToForgotPassword()" class="auth-link">Resetujte lozinku</a></p>
         </div>
+          <div id="recaptcha-container" class="form-group"></div>
   
         <div *ngIf="errorMessage" class="error-message global-error">
           {{ errorMessage }}

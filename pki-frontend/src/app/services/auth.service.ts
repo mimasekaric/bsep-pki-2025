@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 export interface LoginRequest {
   email: string;
   password: string;
+  recaptchaToken: string;
 }
 
 export interface RegisterRequest {
@@ -31,6 +32,7 @@ export interface AuthResponse {
   accessToken: string;
   email: string;
   user: string;
+  mustChangePassword?: boolean; 
 }
 
 export interface User {
@@ -39,6 +41,20 @@ export interface User {
   surname: string;
   email: string;
   role: string;
+  mustChangePassword?: boolean;
+}
+
+export interface CAUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export interface UserOrganizationResponseDTO {
@@ -98,7 +114,8 @@ export class AuthService {
         name: '',
         surname: '',
         email: email,
-        role: 'USER'
+        role: 'USER',
+        mustChangePassword: false
       };
     }
 
@@ -111,7 +128,8 @@ export class AuthService {
         name: payload.name || '',
         surname: payload.surname || '',
         email: payload.sub || email,
-        role: payload.scope ? payload.scope.split(' ')[0] : 'USER'
+        role: payload.scope ? payload.scope.split(' ')[0] : 'USER',
+        mustChangePassword: payload.mustChangePassword || false
       };
     } catch (error) {
       console.error('Error decoding JWT token:', error);
@@ -192,4 +210,9 @@ export class AuthService {
     );
   }
 
+
+  processLoginResponse(response: AuthResponse): void {
+  this.setToken(response.accessToken);
+  this.setCurrentUser(response.email);
+  }
 }
