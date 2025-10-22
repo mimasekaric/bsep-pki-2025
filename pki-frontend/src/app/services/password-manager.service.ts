@@ -38,7 +38,7 @@ export interface UserCertificateDTO {
   providedIn: 'root'
 })
 export class PasswordManagerService {
-  private apiUrl = 'http://localhost:8080/api/password-manager';
+  private apiUrl = 'https://localhost:8443/api/password-manager';
 
   constructor(private http: HttpClient) { }
 

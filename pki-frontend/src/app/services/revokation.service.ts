@@ -18,7 +18,7 @@ export interface RevocationResponse {
 })
 export class RevokationService {
 
-  private apiUrl = 'http://localhost:8080/api/revoke';
+  private apiUrl = 'https://localhost:8443/api/revoke';
   constructor(private authService: AuthService, private http: HttpClient) { }
 
   private createAuthHeaders(): HttpHeaders | null {

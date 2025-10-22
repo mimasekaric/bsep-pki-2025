@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 })
 export class CrlService {
  
-  private apiUrl = 'http://localhost:8080/api/crl'; 
+  private apiUrl = 'https://localhost:8443/api/crl'; 
 
   constructor(
     private http: HttpClient,
