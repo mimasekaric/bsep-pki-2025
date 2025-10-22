@@ -52,10 +52,10 @@ public class AuthService implements IAuthService {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
         );
-        /*
+
         if (!recaptchaService.validateRecaptcha(loginRequest.getRecaptchaToken())) {
             throw new SecurityException("reCAPTCHA validation failed.");
-        }*/
+        }
 
 
         String email = authentication.getName();
