@@ -52,6 +52,7 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
     );
 
     List<Certificate> findByOwnerIdAndType(UUID ownerId, CertificateType type);
+    List<Certificate>findByOwner_Id(UUID ownerId);
 
     Optional<Certificate> findTopByOwner_IdAndTypeAndRevokedFalseAndValidToAfterOrderByValidFromDesc(
             UUID ownerId, CertificateType type, LocalDateTime now
