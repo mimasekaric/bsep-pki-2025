@@ -215,4 +215,29 @@ export class AuthService {
   this.setToken(response.accessToken);
   this.setCurrentUser(response.email);
   }
+
+  hasRole(expectedRole: string): boolean {
+    if (!this.isLoggedIn()) {
+      return false;
+    }
+
+    const token = this.getToken()!;
+    try {
+      const decodedToken: any = this.decodeJWTToken(token);
+  
+      const userRole = decodedToken.role || decodedToken.scope; 
+      return userRole === expectedRole;
+    } catch (error) {
+      return false;
+    }
+  }
+
+   isLoggedIn(): boolean {
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    return true;
+  }
 }

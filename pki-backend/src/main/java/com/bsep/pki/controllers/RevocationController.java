@@ -7,6 +7,7 @@ import com.bsep.pki.services.CertificateService;
 import com.bsep.pki.dtos.requests.RevocationRequestDTO;
 import com.bsep.pki.services.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org. springframework. security. core. Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,7 @@ public class RevocationController {
     private final UserService userService;
 
     @PostMapping("/{serialNumber}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> revoke(@PathVariable String serialNumber, @RequestBody RevocationRequestDTO dto) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

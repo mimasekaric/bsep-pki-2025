@@ -12,6 +12,9 @@
     <div class="navbar-links">
       <!-- Levi deo -->
       <ul class="nav-group">
+        <li *ngIf="isLoggedIn && isAdmin">
+          <a routerLink="/admin" routerLinkActive="active-link">Kreiraj CA korisnika</a>
+        </li>
         <li *ngIf="isLoggedIn && !isAdmin && !isCaUser">
           <a routerLink="/password-manager" routerLinkActive="active-link">Upravljanje lozinkama</a>
         </li>

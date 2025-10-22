@@ -25,6 +25,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -109,12 +110,14 @@ public class AuthController {
 
 
     @PostMapping("/forgot-password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         passwordResetService.initiatePasswordReset(request.email());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/reset-password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             passwordResetService.finalizePasswordReset(request.token(), request.newPassword());
@@ -124,11 +127,13 @@ public class AuthController {
         }
     }
     @GetMapping("/tokens/{email}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getActiveSessions(@PathVariable String email) {
         List<ActiveSession> sessions = sessionService.getSessionsForUser(email);
         return ResponseEntity.ok(sessions);
     }
     @DeleteMapping("/tokensdelete/{email}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> revokeAllOtherSessionsForUser(
             @PathVariable String email,
             @RequestHeader(name = "Authorization") String authHeader) {
@@ -144,12 +149,14 @@ public class AuthController {
     }
 
     @DeleteMapping("/revoke/{token}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> revokeSession(@PathVariable String token) {
         sessionService.revokeSession(token);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<UserIdResponseDTO> getCurrentUserId(@RequestHeader(name = "Authorization") String authHeader) {
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

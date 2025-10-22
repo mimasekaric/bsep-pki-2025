@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
@@ -21,6 +22,7 @@ public class CrlController {
     private String crlBasePath;
 
     @GetMapping("/{issuerSerial}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<InputStreamResource> downloadCrl(@PathVariable String issuerSerial) {
         try {
             File crlFile = new File(crlBasePath, issuerSerial + ".crl");

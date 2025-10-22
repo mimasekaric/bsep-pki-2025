@@ -16,23 +16,27 @@ import { CsrUploadComponent } from './components/csr-upload/csr-upload.component
 import { CsrListComponent } from './components/csr-list/csr-list.component';
 import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
+import { AdminGuard } from './admin.guard';
+import { AdminOrCaUserGuard } from './aedmin-or-ca.guard';
+import { OrdinaryGuard } from './ordinary.guard';
+import { CaGuard } from './ca.guard';
 
 const routes: Routes = [
   { path: 'splash', component: SplashScreenComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-  { path: 'tokens', component: TokensComponent },
+  { path: 'tokens', component: TokensComponent, canActivate: [AuthGuard] },
   { path: 'verify-email', component: EmailVerificationComponent },
-  { path: 'issue-certificate', component: IssueCertificateComponent },
-  { path: 'csr/upload', component: CsrUploadComponent },
-    { path: 'password-manager', component: PasswordManagerComponent, canActivate: [AuthGuard] },
-  { path: 'csr/list-pending', component: CsrListComponent, canActivate: [AuthGuard] },
-  { path: 'admin', component: AdminComponent, canActivate: [AuthGuard] },
-  { path: 'change-password', component: ChangePasswordComponent, canActivate: [AuthGuard] },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
+  { path: 'issue-certificate', component: IssueCertificateComponent, canActivate: [AdminOrCaUserGuard] },
+  { path: 'csr/upload', component: CsrUploadComponent, canActivate: [OrdinaryGuard] },
+  { path: 'csr/list-pending', component: CsrListComponent, canActivate: [CaGuard] },
+  { path: 'admin', component: AdminComponent, canActivate: [AdminGuard] },
+  { path: 'change-password', component: ChangePasswordComponent, canActivate: [CaGuard] },
+  { path: 'password-manager', component: PasswordManagerComponent, canActivate: [AuthGuard] },
+  { path: 'forgot-password', component: ForgotPasswordComponent},
   { path: 'reset-password', component: ResetPasswordComponent },
-  { path: 'certificates', component: CertificateListComponent },
-  { path: 'template', component: TemplateComponent },
+  { path: 'certificates', component: CertificateListComponent, canActivate: [AuthGuard] },
+  { path: 'template', component: TemplateComponent, canActivate: [CaGuard] },
   { path: '', redirectTo: '/splash', pathMatch: 'full' },
   { path: '**', redirectTo: '/splash' }
 ];

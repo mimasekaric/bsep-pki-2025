@@ -111,7 +111,13 @@ export class TemplateComponent implements OnInit {
       if (err.status === 201 && err.error?.text) {
         this.successMessage = err.error.text;
       } else {
-        this.errorMessage = err.error?.message || 'Došlo je do greške prilikom kreiranja šablona.';
+        // Provera da li je greška zbog duplikata imena šablona
+        const errorText = err.error?.message || err.error || '';
+        if (errorText.includes('already exists') || errorText.includes('Template with name')) {
+          this.errorMessage = 'Šablon sa ovim imenom već postoji. Molimo koristite jedinstveno ime za novi šablon.';
+        } else {
+          this.errorMessage = errorText || 'Došlo je do greške prilikom kreiranja šablona.';
+        }
       }
       console.error(err);
     }

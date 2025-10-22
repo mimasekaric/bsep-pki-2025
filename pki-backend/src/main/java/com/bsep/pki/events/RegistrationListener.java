@@ -26,17 +26,15 @@ public class RegistrationListener implements ApplicationListener<OnRegistrationC
 
     private void confirmRegistration(OnRegistrationCompletedEvent event) {
         User user = event.getUser();
-        
-        // Kreiraj token sa vremenskim ograničenjem
+
         VerificationToken verificationToken = tokenService.createVerificationTokenWithExpiry(user);
-        
-        // Takođe kreiraj token u starom sistemu za kompatibilnost
+
         String oldToken = UUID.randomUUID().toString();
         tokenService.createVerificationToken(user, oldToken);
 
         String recipientAddress = user.getEmail();
         String subject = "Email Verification";
-        String confirmationUrl = "http://localhost:4200/verify-email?token=" + verificationToken.getToken();
+        String confirmationUrl = "https://localhost:4200/verify-email?token=" + verificationToken.getToken();
         String message = "Click the link to verify your email: " + confirmationUrl;
 
         emailService.sendEmail(recipientAddress, subject, message);
