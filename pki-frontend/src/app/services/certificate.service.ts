@@ -51,7 +51,7 @@ export interface SubjectDto {
   providedIn: 'root'
 })
 export class CertificateService {
-  private apiUrl = 'http://localhost:8080/api/certificates';
+  private apiUrl = 'https://localhost:8443/api/certificates';
 
   constructor(private http: HttpClient, private authService: AuthService) { }
 

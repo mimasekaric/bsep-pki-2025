@@ -27,7 +27,7 @@ export interface TemplateInfoDTO {
   providedIn: 'root'
 })
 export class CertificateTemplateService {
-  private readonly apiUrl = `http://localhost:8080/api/templates`;
+  private readonly apiUrl = `https://localhost:8443/api/templates`;
 
   constructor(private http: HttpClient) { }
 

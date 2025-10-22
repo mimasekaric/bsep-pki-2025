@@ -17,7 +17,6 @@ import { CsrListComponent } from './components/csr-list/csr-list.component';
 import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
 
 const routes: Routes = [
-  { path: '', redirectTo: '/splash', pathMatch: 'full' },
   { path: 'splash', component: SplashScreenComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
@@ -32,6 +31,7 @@ const routes: Routes = [
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'certificates', component: CertificateListComponent },
   { path: 'template', component: TemplateComponent },
+  { path: '', redirectTo: '/splash', pathMatch: 'full' },
   { path: '**', redirectTo: '/splash' }
 ];
 
