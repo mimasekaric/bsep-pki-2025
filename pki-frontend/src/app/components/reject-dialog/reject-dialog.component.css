@@ -1,0 +1,35 @@
+.dialog-description {
+  margin-bottom: 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+mat-dialog-content {
+  min-width: 400px;
+  padding: 20px 24px;
+}
+
+mat-dialog-actions {
+  padding: 12px 24px;
+}
+
+.centered-dialog .mat-mdc-dialog-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.centered-dialog {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mat-mdc-dialog-container {
+  max-height: 90vh;
+  overflow: auto;
+}

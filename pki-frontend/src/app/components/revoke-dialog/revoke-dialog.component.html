@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>Povlačenje Sertifikata</h2>
+
+<mat-dialog-content>
+  <p>Unesite razlog za povlačenje sertifikata sa serijskim brojem:</p>
+  <p><strong>{{ data.certificate.serialNumber }}</strong></p>
+  
+   <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Razlog povlačenja</mat-label>
+    <mat-select [(ngModel)]="selectedReasonKey" name="reason" required>
+      <mat-option *ngFor="let entry of reasonEntries" [value]="entry.key">
+        {{ entry.display }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
+
+</mat-dialog-content>
+
+<mat-dialog-actions>
+  <button mat-button (click)="onCancel()">Otkaži</button>
+  <button mat-raised-button color="warn" (click)="onConfirm()">
+    Potvrdi Povlačenje
+  </button>
+</mat-dialog-actions>
