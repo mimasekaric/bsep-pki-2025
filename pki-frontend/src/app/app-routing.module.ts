@@ -14,6 +14,7 @@ import { TokensComponent } from './components/tokens/tokens.component';
 import { TemplateComponent } from './components/template/template.component';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
 
 const routes: Routes = [
@@ -25,6 +26,7 @@ const routes: Routes = [
   { path: 'verify-email', component: EmailVerificationComponent },
   { path: 'issue-certificate', component: IssueCertificateComponent },
   { path: 'csr/upload', component: CsrUploadComponent },
+    { path: 'password-manager', component: PasswordManagerComponent, canActivate: [AuthGuard] },
   { path: 'csr/list-pending', component: CsrListComponent, canActivate: [AuthGuard] },
   { path: 'admin', component: AdminComponent, canActivate: [AuthGuard] },
   { path: 'change-password', component: ChangePasswordComponent, canActivate: [AuthGuard] },

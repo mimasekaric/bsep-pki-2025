@@ -27,6 +27,7 @@ import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,8 +36,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.StringWriter;
 import java.math.BigInteger;
 import java.security.*;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -986,6 +990,90 @@ public class CertificateService {
 
 
 
+
+
+    public X509Certificate getUserValidEndEntityCertificate(UUID userId) {
+        // Pronađi  najnoviji END_ENTITY sertifikat koji pripada korisniku i nije opozvani.
+
+        Optional<Certificate> latestValidCertEntityOptional = certificateRepository.findTopByOwner_IdAndTypeAndRevokedFalseAndValidToAfterOrderByValidFromDesc(
+                userId, CertificateType.END_ENTITY, LocalDateTime.now()
+        );
+
+        if (latestValidCertEntityOptional.isEmpty()) {
+            throw new ResourceNotFoundException("No valid End-Entity certificate found for user ID: " + userId + " or all have expired/revoked.");
+        }
+        Certificate latestCertEntity = latestValidCertEntityOptional.get();
+
+        // Dohvati Keystore entitet povezan sa pronađenim sertifikatom
+        Keystore keystoreEntity = latestCertEntity.getKeystore();
+        if (keystoreEntity == null) {
+            throw new IllegalStateException("Keystore not found for certificate alias: " + latestCertEntity.getAlias());
+        }
+
+        // Dešifruj lozinku Keystore-a
+        // Pretpostavljamo da 'keystoreEntity.getEncryptedPassword()' vraća string koji je šifrovan
+        // i da 'cryptoService.decryptAES()' zna kako da ga dešifruje.
+        String decryptedPassword;
+        try {
+            decryptedPassword = cryptoService.decryptAES(keystoreEntity.getEncryptedPassword());
+        } catch (Exception e) { // Specifičnije uhvatiti BadPaddingException, IllegalBlockSizeException, NoSuchPaddingException ako ih decryptAES baca
+            throw new IllegalStateException("Failed to decrypt keystore password for keystore ID: " + keystoreEntity.getId(), e);
+        }
+
+
+        try {
+            // Učitaj KeyStore
+            // keystoreService.loadKeyStore bi trebalo da uzima ID keystore-a i vraća KeyStore objekat.
+            // Trebaće mu i lozinka za otvaranje.
+            KeyStore ks = keystoreService.loadKeyStore(keystoreEntity.getId(), decryptedPassword.toCharArray());
+
+            // Dohvati certifikat iz KeyStore-a koristeći njegov alias
+            java.security.cert.Certificate cert = ks.getCertificate(latestCertEntity.getAlias());
+
+            if (cert == null) {
+                throw new ResourceNotFoundException("Certificate with alias '" + latestCertEntity.getAlias() + "' not found in keystore ID: " + keystoreEntity.getId());
+            }
+
+            if (!(cert instanceof X509Certificate)) {
+                throw new IllegalStateException("Certificate found for alias '" + latestCertEntity.getAlias() + "' is not an X509Certificate.");
+            }
+
+            // Vrati X509Certificate objekat
+            return (X509Certificate) cert;
+
+        } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
+            throw new ResourceNotFoundException("Failed to load certificate for user " + userId + " from keystore: " + e.getMessage());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Dobavlja javni ključ iz važećeg End-Entity sertifikata korisnika.
+     *
+     * @param userId ID korisnika
+     * @return PublicKey objekat
+     * @throws ResourceNotFoundException ako sertifikat nije pronađen ili nije važeći
+     */
+    public PublicKey getUserEndEntityPublicKey(UUID userId) {
+        X509Certificate cert = getUserValidEndEntityCertificate(userId); // Poziva prethodnu metodu
+        return cert.getPublicKey();
+    }
+
+    public String getUserEndEntityPublicKeyPem(UUID userId) throws IOException {
+        X509Certificate cert = getUserValidEndEntityCertificate(userId); // Koristi postojeću metodu
+        PublicKey publicKey = cert.getPublicKey();
+
+        StringWriter publicPemWriter = new StringWriter();
+        JcaPEMWriter pemWriter = new JcaPEMWriter(publicPemWriter);
+        try {
+            pemWriter.writeObject(publicKey);
+            pemWriter.close();
+        } catch (IOException e) {
+            throw new IOException("Failed to convert public key to PEM format", e);
+        }
+        return publicPemWriter.toString();
+    }
 }
 
 

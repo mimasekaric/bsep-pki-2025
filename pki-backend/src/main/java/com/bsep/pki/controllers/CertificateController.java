@@ -19,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
@@ -73,14 +74,14 @@ public class CertificateController {
     @GetMapping("/download/{certificateId}")
     public ResponseEntity<byte[]> downloadCertificate(@PathVariable Long certificateId) {
         try {
-            // Load the complete certificate chain
+
             java.security.cert.Certificate[] certificateChain = certificateService.loadCertificateChainById(certificateId);
 
             if (certificateChain == null || certificateChain.length == 0) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
 
-            // Convert to PKCS#7 format which preserves hierarchy better
+
             byte[] pkcs7Bytes = certificateService.convertCertificateChainToPKCS7(certificateChain);
 
             return ResponseEntity.ok()
@@ -161,5 +162,35 @@ public class CertificateController {
 
         List<CertificateDetailsDTO> userCerts = certificateService.getCaCertificatesForUser(loggedInUser.getId());
         return ResponseEntity.ok(userCerts);
+    }
+
+
+
+    @GetMapping("/my-public-key")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'END_ENTITY')")
+    public ResponseEntity<?> getMyPublicKeyPem(Principal principal) {
+        try {
+            String userEmail = principal.getName();
+            User user = userService.findByEmail(userEmail);
+            String publicKeyPem = certificateService.getUserEndEntityPublicKeyPem(user.getId());
+            return ResponseEntity.ok(publicKeyPem);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @GetMapping("/public-key/{email}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'CA_USER', 'END_ENTITY')")
+    public ResponseEntity<?> getPublicKeyPemForUser(@PathVariable String email) {
+        try {
+            UUID userId = userService.getIdByUsername(email);
+            String publicKeyPem = certificateService.getUserEndEntityPublicKeyPem(userId);
+            return ResponseEntity.ok(publicKeyPem);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Failed to convert public key to PEM.", HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        }
     }
 }

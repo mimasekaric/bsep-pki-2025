@@ -89,6 +89,10 @@ public  Optional<User> getUserByUsername(String username) {
         Optional<User> user = userRepository.findByEmail(username);
         return user;
 }
+    public  UUID  getIdByUsername(String username) {
+        Optional<User> user = getUserByUsername(username);
+        return user.get().getId();
+    }
 
     public  Optional<User> getUserByEmail(String email) {
         Optional<User> user = userRepository.findByEmail(email);

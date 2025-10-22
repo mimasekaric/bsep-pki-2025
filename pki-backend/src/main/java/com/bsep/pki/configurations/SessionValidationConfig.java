@@ -12,13 +12,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component // Važno: Spring će ga prepoznati kao Bean
+@Component
 public class SessionValidationConfig extends OncePerRequestFilter {
 
     private final SessionService sessionService;
     private final JwtDecoder jwtDecoder;
 
-    @Autowired // Spring će automatski injektovati zavisnosti
+    @Autowired
     public SessionValidationConfig(SessionService sessionService, JwtDecoder jwtDecoder) {
         this.sessionService = sessionService;
         this.jwtDecoder = jwtDecoder;

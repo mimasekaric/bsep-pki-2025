@@ -30,7 +30,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   isCaUser = false;
   availableSubjects: SubjectDto[] = [];
 
-  private currentUserId: number | null = null;
+  private currentUserId: string | null = null;
   private userSubscription: Subscription;
   private caUserOrganization: string | null = null;
 
