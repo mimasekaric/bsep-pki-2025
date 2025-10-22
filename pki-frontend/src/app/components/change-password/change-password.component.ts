@@ -21,6 +21,7 @@ export class ChangePasswordComponent implements OnInit {
   errorMessage = '';
   successMessage = '';
   isForced = false; 
+  passwordStrength: any = null;
 
   constructor(
     private fb: FormBuilder,
@@ -78,7 +79,7 @@ export class ChangePasswordComponent implements OnInit {
           setTimeout(() => {
             if (this.isForced) {
               // Ako je forced, preusmeri na glavnu stranicu
-              this.router.navigate(['/issue-certificate']);
+              this.router.navigate(['/certificates']);
             }
             // Inače ostani na stranici
           }, 2000);
@@ -94,5 +95,62 @@ export class ChangePasswordComponent implements OnInit {
   
   canNavigateAway(): boolean {
     return !this.isForced;
+  }
+
+    checkPasswordStrength() {
+    // Prilagođeno da čita iz 'newPassword' polja
+    const password = this.changePasswordForm.get('newPassword')?.value;
+    if (!password) {
+      this.passwordStrength = null;
+      return;
+    }
+
+    let score = 0;
+    let feedback = [];
+
+    // Length check
+    if (password.length >= 8) score += 1;
+    else feedback.push('Najmanje 8 karaktera');
+
+    // Lowercase check
+    if (/[a-z]/.test(password)) score += 1;
+    else feedback.push('Mala slova');
+
+    // Uppercase check
+    if (/[A-Z]/.test(password)) score += 1;
+    else feedback.push('Velika slova');
+
+    // Number check
+    if (/\d]/.test(password)) score += 1;
+    else feedback.push('Brojevi');
+
+    // Special character check
+    if (/[@$!%*?&]/.test(password)) score += 1;
+    else feedback.push('Specijalni karakteri');
+
+    // Length bonus
+    if (password.length >= 12) score += 1;
+
+    let level = 'weak';
+    let text = 'Slaba lozinka';
+    let color = 'red';
+
+    if (score >= 5) {
+      level = 'strong';
+      text = 'Jaka lozinka';
+      color = 'green';
+    } else if (score >= 3) {
+      level = 'medium';
+      text = 'Srednja lozinka';
+      color = 'orange';
+    }
+
+    this.passwordStrength = {
+      level: level,
+      text: text,
+      color: color,
+      score: score,
+      feedback: feedback
+    };
   }
 }

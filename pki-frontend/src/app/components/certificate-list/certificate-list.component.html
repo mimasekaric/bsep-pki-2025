@@ -55,7 +55,7 @@
 
       <!-- Podnožje kartice sa akcijama -->
       <div class="cert-card-footer">
-        <button class="btn btn-outline-primary" (click)="downloadCertificate(cert.id)">Preuzmi</button>
+        <button class="btn btn-outline-primary" *ngIf="!cert.revoked" (click)="downloadCertificate(cert.id)">Preuzmi</button>
         <button class="btn btn-outline-danger" (click)="openRevokeDialog(cert)" [disabled]="cert.revoked">Povuci</button>
         <button 
             class="btn btn-crl" 
