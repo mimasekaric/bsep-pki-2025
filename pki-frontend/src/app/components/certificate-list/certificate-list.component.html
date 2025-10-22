@@ -1,0 +1,71 @@
+<div class="container-fluid">
+  <div class="card-list-header">
+    <h2>{{ pageTitle }}</h2>
+    <p>Pregled digitalnih sertifikata.</p>
+  </div>
+  
+  <!-- Statusne poruke ostaju iste -->
+  <div *ngIf="isLoading" class="status-message-container">
+    <div class="spinner-border" role="status"></div>
+  </div>
+  <div *ngIf="!isLoading && errorMessage" class="status-message-container">
+    <div class="alert alert-danger">{{ errorMessage }}</div>
+  </div>
+  <div *ngIf="!isLoading && !errorMessage && certificates.length === 0" class="status-message-container">
+    <div class="alert alert-info">Nema sertifikata za prikaz.</div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- NOVI DEO: KONTEJNER ZA KARTICE -->
+  <!-- ============================================= -->
+  <div class="certificate-grid" *ngIf="!isLoading && certificates.length > 0">
+    
+    <!-- *ngFor petlja sada kreira karticu za svaki sertifikat -->
+    <div class="cert-card" *ngFor="let cert of certificates" [class.revoked]="cert.revoked">
+      
+      <!-- Zaglavlje kartice sa statusom -->
+      <div class="cert-card-header">
+        <span class="badge" [ngClass]="{'bg-primary': cert.type === 'ROOT', 'bg-info': cert.type === 'INTERMEDIATE', 'bg-secondary': cert.type === 'END_ENTITY'}">
+          {{ cert.type }}
+        </span>
+        <span class="badge" [ngClass]="{'bg-success': !cert.revoked, 'bg-danger': cert.revoked}">
+          {{ cert.revoked ? 'Povučen' : 'Aktivan' }}
+        </span>
+      </div>
+
+      <!-- Telo kartice sa podacima -->
+      <div class="cert-card-body">
+        <div class="cert-info-group">
+          <label>Vlasnik (Subject)</label>
+           <p [title]="cert.subjectDN">{{ cert.subjectDN | parseDn }}</p>
+        </div>
+        <div class="cert-info-group">
+          <label>Serijski Broj</label>
+          <p [title]="cert.serialNumber">{{ cert.serialNumber }}</p>
+        </div>
+        <div class="cert-info-group">
+          <label>Izdavalac (Issuer SN)</label>
+          <p [title]="cert.issuerSerialNumber">{{ cert.issuerSerialNumber }}</p>
+        </div>
+        <div class="cert-info-group">
+          <label>Važi do</label>
+          <p>{{ cert.validTo | date:'dd.MM.yyyy. HH:mm' }}</p>
+        </div>
+      </div>
+
+      <!-- Podnožje kartice sa akcijama -->
+      <div class="cert-card-footer">
+        <button class="btn btn-outline-primary" (click)="downloadCertificate(cert.id)">Preuzmi</button>
+        <button class="btn btn-outline-danger" (click)="openRevokeDialog(cert)" [disabled]="cert.revoked">Povuci</button>
+        <button 
+            class="btn btn-crl" 
+            *ngIf="cert.revoked" 
+            (click)="downloadCrl(cert.issuerSerialNumber)"
+        >
+            Preuzmi CRL
+        </button> 
+      </div>
+    </div>
+
+  </div>
+</div>

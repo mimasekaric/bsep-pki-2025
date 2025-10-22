@@ -19,6 +19,9 @@ export class NavbarComponent implements OnInit {
   get isCaUser(): boolean {
     return this.currentUser?.role === 'ROLE_CA_USER';
   }
+  get mustChangePassword(): boolean { 
+    return this.currentUser?.mustChangePassword === true;
+  }
 
   constructor(
     private authService: AuthService,

@@ -36,7 +36,9 @@
             <span *ngIf="loginForm.get('password')?.errors?.['required']">Lozinka je obavezna</span>
             <span *ngIf="loginForm.get('password')?.errors?.['minlength']">Lozinka mora imati najmanje 6 karaktera</span>
           </div>
+          <p>Zaboravili ste lozinku? <a (click)="goToForgotPassword()" class="auth-link">Resetujte lozinku</a></p>
         </div>
+          <div id="recaptcha-container" class="form-group"></div>
   
         <div *ngIf="errorMessage" class="error-message global-error">
           {{ errorMessage }}
@@ -49,11 +51,11 @@
         >
           <span *ngIf="!isLoading">Prijavi se</span>
           <span *ngIf="isLoading">Prijavljivanje...</span>
-        </button>
+        </button>        
       </form>
   
       <div class="auth-footer">
-        <p>Nemate nalog? <a (click)="goToRegister()" class="auth-link">Registrujte se</a></p>
+        <p>Nemate nalog? <a (click)="goToRegister()" class="auth-link">Registrujte se</a></p>        
       </div>
     </div>
   </div>

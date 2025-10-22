@@ -1,9 +1,18 @@
 package com.bsep.pki.controllers;
 
-import ch.qos.logback.core.net.SyslogOutputStream;
+import com.bsep.pki.dtos.requests.ForgotPasswordRequest;
 import com.bsep.pki.dtos.requests.LoginRequestDTO;
+import com.bsep.pki.dtos.requests.ResetPasswordRequest;
 import com.bsep.pki.dtos.requests.UserRegistrationDTO;
+import com.bsep.pki.dtos.requests.CAUserRegistrationDTO;
+import com.bsep.pki.dtos.requests.ChangePasswordDTO;
 import com.bsep.pki.dtos.responses.LoginResponseDTO;
+import com.bsep.pki.dtos.responses.UserIdResponseDTO;
+import com.bsep.pki.dtos.responses.UserOrganizationResponseDTO;
+import com.bsep.pki.exceptions.InvalidTokenException;
+import com.bsep.pki.services.PasswordResetService;
+import com.bsep.pki.services.VerificationTokenService;
+import com.bsep.pki.services.interfaces.IAuthService;
 import com.bsep.pki.dtos.responses.UserResponseDTO;
 import com.bsep.pki.models.ActiveSession;
 import com.bsep.pki.models.User;
@@ -16,14 +25,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.ui.Model;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,7 +42,10 @@ public class AuthController {
 
     private final IAuthService authService;
     private final VerificationTokenService tokenService;
+    private final PasswordResetService passwordResetService;
     private final SessionService sessionService;
+    private final JwtDecoder jwtDecoder;
+    private final IUserService userService;
 
 
     @PostMapping("/login")
@@ -94,6 +107,22 @@ public class AuthController {
         }
     }
 
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        passwordResetService.initiatePasswordReset(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.finalizePasswordReset(request.token(), request.newPassword());
+            return ResponseEntity.ok("Lozinka je uspešno resetovana.");
+        } catch (InvalidTokenException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
     @GetMapping("/tokens/{email}")
     public ResponseEntity<?> getActiveSessions(@PathVariable String email) {
         List<ActiveSession> sessions = sessionService.getSessionsForUser(email);
@@ -113,10 +142,71 @@ public class AuthController {
         sessionService.revokeAllOtherSessions(email, currentToken);
         return ResponseEntity.noContent().build();
     }
+
     @DeleteMapping("/revoke/{token}")
     public ResponseEntity<Void> revokeSession(@PathVariable String token) {
         sessionService.revokeSession(token);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserIdResponseDTO> getCurrentUserId(@RequestHeader(name = "Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            Jwt decodedJwt = this.jwtDecoder.decode(token);
+
+            String email = decodedJwt.getSubject();
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            User user = userService.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            UserIdResponseDTO response = new UserIdResponseDTO(user.getId());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    @GetMapping("/my-organisation")
+    public ResponseEntity<UserOrganizationResponseDTO> getCurrentUserOrganisation(@RequestHeader(name = "Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            Jwt decodedJwt = this.jwtDecoder.decode(token);
+
+            String email = decodedJwt.getSubject();
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            User user = userService.findByEmail(email);
+
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            }
+
+            UserOrganizationResponseDTO response = new UserOrganizationResponseDTO(user.getOrganisation());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
 }

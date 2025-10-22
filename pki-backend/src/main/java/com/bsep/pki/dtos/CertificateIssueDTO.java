@@ -1,6 +1,7 @@
 package com.bsep.pki.dtos;
 
 
+import com.bsep.pki.enums.CertificateType;
 import lombok.Data;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -19,8 +20,11 @@ public class CertificateIssueDTO {
 
     private String issuerSerialNumber;
     private UUID subjectUserId;
+    private CertificateType certificateType;
 
-    private List<String> keyUsages; // Npr: "DIGITAL_SIGNATURE", "KEY_ENCIPHERMENT"
-    private List<String> extendedKeyUsages; // Npr: "SERVER_AUTH", "CLIENT_AUTH"
-    private List<String> subjectAlternativeNames; // Npr: "dns:example.com", "ip:192.168.1.1"
+    private List<String> keyUsages;
+    private List<String> extendedKeyUsages;
+    private List<String> subjectAlternativeNames;
+
+    private Long templateId;
 }

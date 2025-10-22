@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CsrService, CaCertificate } from '../../services/csr.service';
+import { CaUser, UserService } from 'src/app/services/user.service';
+import { User } from 'src/app/services/auth.service';
 
 @Component({
   selector: 'app-csr-upload',
@@ -9,7 +11,7 @@ import { CsrService, CaCertificate } from '../../services/csr.service';
 })
 export class CsrUploadComponent implements OnInit {
   csrForm: FormGroup;
-  availableCAs: CaCertificate[] = [];
+  availableCAs: CaUser[] = []; 
 
   pemContent: string | null = null;
   selectedFile: File | null = null;
@@ -20,11 +22,12 @@ export class CsrUploadComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private csrService: CsrService
+    private csrService: CsrService,
+    private userService: UserService
   ) {
     // Inicijalizujemo formu sa svim potrebnim poljima i validatorima
     this.csrForm = this.fb.group({
-      signingCertificateSerialNumber: ['', Validators.required],
+      approverId: ['', Validators.required],
       requestedValidFrom: ['', Validators.required],
       requestedValidTo: ['', Validators.required],
     });
@@ -34,19 +37,13 @@ export class CsrUploadComponent implements OnInit {
     this.loadAvailableCAs();
   }
 
-  /**
-   * Učitava listu dostupnih CA sertifikata sa backenda.
-   */
   loadAvailableCAs(): void {
-    this.csrService.getValidCaCertificates().subscribe({
-      next: (cas) => {
-        this.availableCAs = cas;
-      },
-      error: (err) => {
-        this.errorMessage = 'Greška pri učitavanju liste CA sertifikata.';
-      }
+    this.userService.getCaUsers().subscribe({
+      next: (users) => { this.availableCAs = users; },
+      error: (err) => { this.errorMessage = 'Greška pri učitavanju liste CA korisnika.'; }
     });
   }
+
 
   onFileSelected(event: any): void {
     const file: File = event.target.files[0];

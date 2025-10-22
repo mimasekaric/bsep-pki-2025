@@ -1,5 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { CsrService, CsrResponse } from '../../services/csr.service';
+import { ApproveDialogComponent, ApproveDialogResult } from '../approve-dialog.component.ts/approve-dialog.component.ts.component';
+import { RejectDialogComponent, RejectDialogResult } from '../reject-dialog/reject-dialog.component';
 
 @Component({
   selector: 'app-csr-list',
@@ -11,10 +14,10 @@ export class CsrListComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
 
-  selectedCsr: CsrResponse | null = null;
-  rejectionReason = '';
-
-  constructor(private csrService: CsrService) { }
+  constructor(
+    private csrService: CsrService,
+    private dialog: MatDialog
+  ) { }
 
   ngOnInit(): void {
     this.loadPendingCsrs();
@@ -22,6 +25,7 @@ export class CsrListComponent implements OnInit {
 
   loadPendingCsrs(): void {
     this.isLoading = true;
+    this.errorMessage = '';
     this.csrService.getPendingCsrs().subscribe({
       next: (data) => {
         this.pendingCsrs = data;
@@ -34,43 +38,55 @@ export class CsrListComponent implements OnInit {
     });
   }
 
-  onApprove(csr: CsrResponse): void {
-    // Za approve, prosleđujemo podatke koje smo sačuvali u CSR entitetu
-    const approvePayload = {
-      issuerSerialNumber: csr.signingCertificateSerialNumber,
-      validFrom: csr.requestedValidFrom,
-      validTo: csr.requestedValidTo,
-      // Ekstenzije se čitaju iz CSR-a na backendu, tako da ih ne šaljemo
-      keyUsages: [],
-      extendedKeyUsages: [],
-      subjectAlternativeNames: []
-    };
+  openApproveDialog(csr: CsrResponse): void {
+    const dialogRef = this.dialog.open(ApproveDialogComponent, {
+      width: '600px',
+      maxHeight: '90vh',
+      data: { csr },
+      disableClose: false,
+      autoFocus: true,
+      panelClass: 'centered-dialog'
+    });
 
-    this.csrService.approveCsr(csr.id, approvePayload).subscribe({
-      next: () => {
-        alert('CSR uspešno odobren!');
-        this.loadPendingCsrs(); // Ponovo učitaj listu
-      },
-      error: (err) => alert(`Greška pri odobravanju: ${err.error.message}`)
+    dialogRef.afterClosed().subscribe((result: ApproveDialogResult) => {
+      if (result && result.approved && result.signingCertSerial) {
+        const payload = { signingCertificateSerialNumber: result.signingCertSerial };
+        this.csrService.approveCsr(csr.id, payload).subscribe({
+          next: () => {
+            alert('CSR uspešno odobren!');
+            this.loadPendingCsrs();
+          },
+          error: (err) => {
+            alert(`Greška pri odobravanju: ${err.error?.message || 'Nepoznata greška'}`);
+          }
+        });
+      }
     });
   }
 
-  openRejectModal(csr: CsrResponse): void {
-    this.selectedCsr = csr;
-    this.rejectionReason = ''; // Resetuj polje
-  }
+  openRejectDialog(csr: CsrResponse): void {
+  const dialogRef = this.dialog.open(RejectDialogComponent, {
+    width: '500px',
+    maxHeight: '90vh',
+    data: { csr },
+    disableClose: false,
+    autoFocus: true,
+    panelClass: 'centered-dialog'
+  });
 
-  onReject(): void {
-    if (!this.selectedCsr || !this.rejectionReason) return;
-
-    const payload = { rejectionReason: this.rejectionReason };
-    this.csrService.rejectCsr(this.selectedCsr.id, payload).subscribe({
-      next: () => {
-        alert('CSR uspešno odbijen!');
-        this.selectedCsr = null; // Zatvori modal
-        this.loadPendingCsrs(); // Ponovo učitaj listu
-      },
-      error: (err) => alert(`Greška pri odbijanju: ${err.error.message}`)
-    });
+  dialogRef.afterClosed().subscribe((result: RejectDialogResult) => {
+    if (result && result.rejected && result.reason) {
+      const payload = { rejectionReason: result.reason };
+      this.csrService.rejectCsr(csr.id, payload).subscribe({
+        next: () => {
+          alert('CSR uspešno odbijen!');
+          this.loadPendingCsrs();
+        },
+        error: (err) => {
+          alert(`Greška: ${err.error?.message || 'Nepoznata greška'}`);
+        }
+      });
+    }
+  });
   }
 }

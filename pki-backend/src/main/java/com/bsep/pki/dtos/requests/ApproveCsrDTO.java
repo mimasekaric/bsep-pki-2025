@@ -6,7 +6,5 @@ import java.time.ZonedDateTime;
 
 @Data
 public class ApproveCsrDTO {
-    private String issuerSerialNumber;
-    private ZonedDateTime validFrom;
-    private ZonedDateTime validTo;
+    private String signingCertificateSerialNumber;
 }

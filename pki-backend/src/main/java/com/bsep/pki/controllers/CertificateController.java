@@ -1,6 +1,9 @@
 package com.bsep.pki.controllers;
 
 
+import com.bsep.pki.dtos.IssuerDto;
+import com.bsep.pki.dtos.UserSubjectDto;
+import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.Certificate;
 import com.bsep.pki.models.User;
 import com.bsep.pki.repositories.UserRepository;
@@ -20,6 +23,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/certificates")
@@ -46,11 +50,6 @@ public class CertificateController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
 
-
-
-
-
-
         /*try {
 
             String uuidString = "b667ae38-86aa-4004-b3d5-ddb3fbe50667";
@@ -63,6 +62,7 @@ public class CertificateController {
     }
 
     @PostMapping("/issue")
+    //@PreAuthorize("hasAnyAuthority('ADMIN', 'CA_USER', 'ORDINARY_USER')")
     public ResponseEntity<?> issueCertificate(@RequestBody CertificateIssueDTO dto) {
         try {
             Object result = certificateService.issueCertificate(dto);
@@ -95,10 +95,73 @@ public class CertificateController {
         }
     }
 
+    @GetMapping("/issuers")
+    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA', 'ROLE_USER')")
+    public ResponseEntity<List<IssuerDto>> getAvailableIssuers() {
+        List<IssuerDto> issuers = certificateService.getPotentialIssuers();
+        return ResponseEntity.ok(issuers);
+    }
+
+    @GetMapping("/potential-subjects")
+    public ResponseEntity<List<UserSubjectDto>> getPotentialCertificateSubjects() {
+        List<User> users = userService.findPotentialCertificateSubjects();
+
+        List<UserSubjectDto> potentialSubjectsDto = users.stream()
+                .map(this::mapToUserSubjectDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(potentialSubjectsDto);
+    }
+
+    private UserSubjectDto mapToUserSubjectDto(User user) {
+        return new UserSubjectDto(
+                user.getId(),
+                user.getName(),
+                user.getSurname(),
+                user.getRole().toString()
+        );
+    }
+    
     @GetMapping("/ca")
-    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates() {
-        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificates();
+    public ResponseEntity<List<CertificateDetailsDTO>> getValidCaCertificates(Principal principal) {
+        String ca_user_mail = principal.getName();
+        User ca_user = userService.findByEmail(ca_user_mail);
+        UUID userId = ca_user.getId();
+        List<CertificateDetailsDTO> caCerts = certificateService.getValidCaCertificatesForUser(userId);
         return ResponseEntity.ok(caCerts);
+    }
+
+
+    @GetMapping("/adminCertificates")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<List<CertificateDetailsDTO>> getAllCertificates() {
+        List<CertificateDetailsDTO> allCerts = certificateService.getAllCertificates();
+        return ResponseEntity.ok(allCerts);
+    }
+
+    @GetMapping("/endEntityCertificates")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CertificateDetailsDTO>> getUserEndEntityCertificates(
+            Principal principal
+    ) {
+
+        User loggedInUser = userService.findByEmail(principal.getName());
+
+
+        List<CertificateDetailsDTO> userCerts = certificateService.getEndEntityCertificatesForUser(loggedInUser.getId());
+        return ResponseEntity.ok(userCerts);
+    }
+    @GetMapping("/caCertificates")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CertificateDetailsDTO>> getCaCertificates(
+            Principal principal
+    ) {
+
+        User loggedInUser = userService.findByEmail(principal.getName());
+
+
+        List<CertificateDetailsDTO> userCerts = certificateService.getCaCertificatesForUser(loggedInUser.getId());
+        return ResponseEntity.ok(userCerts);
     }
 
 

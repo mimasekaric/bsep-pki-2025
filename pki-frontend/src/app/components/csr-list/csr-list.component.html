@@ -5,7 +5,6 @@
       <p>Lista svih zahteva koji čekaju na obradu.</p>
     </div>
     <div class="card-body">
-
       <!-- Prikaz statusnih poruka -->
       <div *ngIf="isLoading" class="status-message-container">
         <div class="spinner-border" role="status">
@@ -19,14 +18,14 @@
         <div class="alert alert-info">Trenutno nema zahteva na čekanju.</div>
       </div>
 
-      <!-- Tabela, prikazuje se samo ako ima podataka -->
+      <!-- Tabela -->
       <table *ngIf="!isLoading && pendingCsrs.length > 0" class="table table-hover">
         <thead>
           <tr>
             <th scope="col">ID</th>
             <th scope="col">Podnosilac</th>
             <th scope="col">Kreirano</th>
-            <th scope="col">Traženi Izdavalac (SN)</th>
+          
             <th scope="col">Akcije</th>
           </tr>
         </thead>
@@ -35,13 +34,14 @@
             <td><strong>#{{ csr.id }}</strong></td>
             <td>{{ csr.owner.email }}</td>
             <td>{{ csr.createdAt | date:'dd.MM.yyyy. HH:mm' }}</td>
-            <td title="{{ csr.signingCertificateSerialNumber }}">
-              {{ csr.signingCertificateSerialNumber | slice:0:20 }}...
-            </td>
+          
             <td>
-              <button class="btn btn-sm btn-success me-2" (click)="onApprove(csr)">Odobri</button>
-              <!-- Ovo dugme CILJA modal po ID-ju -->
-              <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal" (click)="openRejectModal(csr)">Odbij</button>
+              <button class="btn btn-sm btn-success me-2" (click)="openApproveDialog(csr)">
+                Odobri
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="openRejectDialog(csr)">
+                Odbij
+              </button>
             </td>
           </tr>
         </tbody>
@@ -49,29 +49,3 @@
     </div>
   </div>
 </div>
-
-
-<!-- <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-      
-        <h5 class="modal-title" id="rejectModalLabel">Odbijanje CSR Zahteva #{{ selectedCsr?.id }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Molimo unesite razlog za odbijanje zahteva.</p>
-        <div class="mb-3">
-          <label for="rejectionReason" class="form-label">Razlog odbijanja</label>
-  
-          <textarea id="rejectionReason" class="form-control" [(ngModel)]="rejectionReason" name="rejectionReason" rows="3" required></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Otkaži</button>
-     
-        <button type="button" class="btn btn-danger" (click)="onReject()" [disabled]="!rejectionReason.trim()" data-bs-dismiss="modal">Potvrdi Odbijanje</button>
-      </div>
-    </div>
-  </div>
-</div> -->

@@ -3,9 +3,10 @@ package com.bsep.pki.models;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 
-    @Entity
+@Entity
     @Data
     public class CSR {
         @Id
@@ -20,7 +21,7 @@ import java.time.LocalDateTime;
         private LocalDateTime createdAt;
         private String rejectionReason;
         @Column(nullable = false)
-        private String signingCertificateSerialNumber;
+        private UUID approverId;
         @Column(nullable = false)
         private LocalDateTime requestedValidFrom;
         @Column(nullable = false)

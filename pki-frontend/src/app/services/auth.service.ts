@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 export interface LoginRequest {
   email: string;
   password: string;
+  recaptchaToken: string;
 }
 
 export interface RegisterRequest {
@@ -18,10 +19,20 @@ export interface RegisterRequest {
   organisation: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   email: string;
   user: string;
+  mustChangePassword?: boolean; 
 }
 
 export interface User {
@@ -30,6 +41,24 @@ export interface User {
   surname: string;
   email: string;
   role: string;
+  mustChangePassword?: boolean;
+}
+
+export interface CAUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface UserOrganizationResponseDTO {
+  organization: string;
 }
 
 @Injectable({
@@ -85,7 +114,8 @@ export class AuthService {
         name: '',
         surname: '',
         email: email,
-        role: 'USER'
+        role: 'USER',
+        mustChangePassword: false
       };
     }
 
@@ -98,7 +128,8 @@ export class AuthService {
         name: payload.name || '',
         surname: payload.surname || '',
         email: payload.sub || email,
-        role: payload.scope ? payload.scope.split(' ')[0] : 'USER'
+        role: payload.scope ? payload.scope.split(' ')[0] : 'USER',
+        mustChangePassword: payload.mustChangePassword || false
       };
     } catch (error) {
       console.error('Error decoding JWT token:', error);
@@ -154,5 +185,34 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem('jwt_token');
+  }
+
+  forgotPassword(email: string): Observable<void> {
+    const requestBody: ForgotPasswordRequest = { email };
+    return this.http.post<void>(`${this.apiUrl}/forgot-password`, requestBody);
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<string> {
+    const requestBody: ResetPasswordRequest = { token, newPassword };
+    return this.http.post(`${this.apiUrl}/reset-password`, requestBody, { responseType: 'text' });
+  }
+
+  fetchCurrentUserId(): Observable<{ id: number }> {
+    return this.http.get<{ id: number }>(`${this.apiUrl}/me`);
+  }
+
+  fetchCurrentUserOrganization(): Observable<string> {
+    return this.http.get<UserOrganizationResponseDTO>(`${this.apiUrl}/my-organisation`).pipe(
+      map(response => {
+        console.log("Primljen odgovor od servera:", response); 
+        return response.organization;
+      })
+    );
+  }
+
+
+  processLoginResponse(response: AuthResponse): void {
+  this.setToken(response.accessToken);
+  this.setCurrentUser(response.email);
   }
 }

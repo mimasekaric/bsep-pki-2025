@@ -1,9 +1,11 @@
 package com.bsep.pki.repositories;
 
+import com.bsep.pki.enums.UserRole;
 import com.bsep.pki.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +14,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String username);
     Optional<User> findByVerificationToken(String token);
+    List<User> findByOrganisationAndRoleIn(String organisation, List<UserRole> roles);
+    List<User> findByRole(UserRole role);
 }

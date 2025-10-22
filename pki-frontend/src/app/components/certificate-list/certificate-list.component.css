@@ -1,0 +1,224 @@
+/* Glavni kontejner i zaglavlje */
+.container-fluid {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f4ff 0%, #e8d5ff 100%);
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+.card-list-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.card-list-header h2 {
+  color: #2d1b69;
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.card-list-header p {
+  color: #6b7280;
+  font-size: 16px;
+}
+
+/* Mreža za raspored kartica */
+.certificate-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+/* Stil za jednu karticu */
+.cert-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.cert-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(139, 69, 255, 0.1);
+}
+
+
+
+/* Zaglavlje kartice */
+.cert-card-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cert-card.revoked {
+  /* Opcija 1: Crvena pozadina (kao što ste imali u tabeli) */
+  background-color: #fef2f2; /* Veoma svetlo crvena */
+
+  /* Opcija 2: Jarka crvena ivica (border) */
+  border: 2px solid #ef4444; /* Jarka crvena */
+
+  /* Opcija 3: Suptilna crvena senka */
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Dodatni stilovi da bi tekst bio čitljiviji na crvenoj pozadini */
+.cert-card.revoked .cert-info-group label {
+  color: #991b1b; /* Tamno crvena za labele */
+}
+
+.cert-card.revoked .cert-info-group p {
+  color: #7f1d1d; /* Malo svetlija crvena za tekst */
+}
+
+.cert-card.revoked .cert-card-footer {
+  background-color: #fee2e2; /* Svetlo crvena za podnožje */
+}
+
+/* Telo kartice */
+.cert-card-body {
+  padding: 20px;
+  flex-grow: 1;
+}
+
+.cert-info-group {
+  margin-bottom: 16px;
+}
+.cert-info-group:last-child {
+  margin-bottom: 0;
+}
+
+.cert-info-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.cert-info-group p {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+  word-wrap: break-word;
+}
+
+/* Podnožje kartice */
+.cert-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+/* Stilovi za Badge-eve, dugmad i statusne poruke */
+.badge {
+  display: inline-block;
+  padding: 0.35em 0.65em;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.375rem;
+}
+
+.bg-primary { background-color: #6366f1; }
+.bg-info { background-color: #3b82f6; }
+.bg-secondary { background-color: #6b7280; }
+.bg-success { background-color: #22c55e; }
+.bg-danger { background-color: #ef4444; }
+
+.btn {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-primary {
+  color: #8b45ff;
+  border: 1px solid #8b45ff;
+  background-color: transparent;
+}
+.btn-outline-primary:hover {
+  background-color: #8b45ff;
+  color: white;
+}
+
+.btn-outline-danger {
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  background-color: transparent;
+}
+.btn-outline-danger:hover {
+  background-color: #ef4444;
+  color: white;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #e5e7eb;
+  border-color: #e5e7eb;
+  color: #9ca3af;
+}
+
+/* === DOPUNJENI DEO === */
+
+/* Kontejner za statusne poruke (Loading, Error, No Data) */
+.status-message-container {
+  padding: 60px 20px;
+  text-align: center;
+  width: 100%;
+}
+
+/* Spinner za loading stanje */
+.spinner-border {
+  display: inline-block;
+  width: 3rem;
+  height: 3rem;
+  vertical-align: -0.125em;
+  border: 0.3em solid #8b45ff;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: 0.75s linear infinite spinner-border;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Generalni stil za poruke (alert) */
+.alert {
+  font-weight: 500;
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  display: inline-block; /* Da se ne širi preko cele stranice */
+}
+
+.alert-danger {
+  color: #721c24;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+.alert-info {
+  color: #0c5460;
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+}
+
+/* === KRAJ DOPUNJENOG DELA === */

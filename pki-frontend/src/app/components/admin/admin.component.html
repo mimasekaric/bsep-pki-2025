@@ -1,0 +1,102 @@
+<div class="admin-container">
+  <div class="admin-card">
+    <div class="admin-header">
+      <h2>Administracija</h2>
+      <p>Kreiraj novi CA korisnički nalog</p>
+    </div>
+
+    <form [formGroup]="caUserForm" (ngSubmit)="onSubmit()" class="admin-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="firstName">Ime</label>
+          <input 
+            type="text" 
+            id="firstName" 
+            formControlName="firstName"
+            class="form-control"
+            [class.error]="caUserForm.get('firstName')?.invalid && caUserForm.get('firstName')?.touched"
+            placeholder="Ime CA korisnika"
+          >
+          <div *ngIf="caUserForm.get('firstName')?.invalid && caUserForm.get('firstName')?.touched" class="error-message">
+            <span *ngIf="caUserForm.get('firstName')?.errors?.['required']">Ime je obavezno</span>
+            <span *ngIf="caUserForm.get('firstName')?.errors?.['minlength']">Ime mora imati najmanje 2 karaktera</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Prezime</label>
+          <input 
+            type="text" 
+            id="lastName" 
+            formControlName="lastName"
+            class="form-control"
+            [class.error]="caUserForm.get('lastName')?.invalid && caUserForm.get('lastName')?.touched"
+            placeholder="Prezime CA korisnika"
+          >
+          <div *ngIf="caUserForm.get('lastName')?.invalid && caUserForm.get('lastName')?.touched" class="error-message">
+            <span *ngIf="caUserForm.get('lastName')?.errors?.['required']">Prezime je obavezno</span>
+            <span *ngIf="caUserForm.get('lastName')?.errors?.['minlength']">Prezime mora imati najmanje 2 karaktera</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email adresa</label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email"
+          class="form-control"
+          [class.error]="caUserForm.get('email')?.invalid && caUserForm.get('email')?.touched"
+          placeholder="email@organizacija.com"
+        >
+        <div *ngIf="caUserForm.get('email')?.invalid && caUserForm.get('email')?.touched" class="error-message">
+          <span *ngIf="caUserForm.get('email')?.errors?.['required']">Email je obavezan</span>
+          <span *ngIf="caUserForm.get('email')?.errors?.['email']">Unesite validan email</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="organization">Organizacija</label>
+        <input 
+          type="text" 
+          id="organization" 
+          formControlName="organization"
+          class="form-control"
+          [class.error]="caUserForm.get('organization')?.invalid && caUserForm.get('organization')?.touched"
+          placeholder="Naziv organizacije"
+        >
+        <div *ngIf="caUserForm.get('organization')?.invalid && caUserForm.get('organization')?.touched" class="error-message">
+          <span *ngIf="caUserForm.get('organization')?.errors?.['required']">Organizacija je obavezna</span>
+          <span *ngIf="caUserForm.get('organization')?.errors?.['minlength']">Organizacija mora imati najmanje 2 karaktera</span>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-message global-error">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="successMessage" class="success-message">
+        {{ successMessage }}
+      </div>
+
+      <button 
+        type="submit" 
+        class="admin-button"
+        [disabled]="caUserForm.invalid || isLoading"
+      >
+        <span *ngIf="!isLoading">Kreiraj CA korisnika</span>
+        <span *ngIf="isLoading">Kreiranje...</span>
+      </button>
+    </form>
+
+    <div class="admin-info">
+      <h3>Informacije:</h3>
+      <ul>
+        <li>CA korisnik će dobiti nasumičnu lozinku na email</li>
+        <li>Moraće da promeni lozinku pri prvom prijavljivanju</li>
+        <li>Nalog je odmah aktivan</li>
+      </ul>
+    </div>
+  </div>
+</div>
