@@ -193,23 +193,20 @@ public  Optional<User> getUserByUsername(String username) {
 
     @Transactional
     public UserResponseDTO createCAUser(CAUserRegistrationDTO caUserDTO, String adminEmail) {
-        // Proveri da li admin postoji i ima ADMIN role
+
         User admin = userRepository.findByEmail(adminEmail)
             .orElseThrow(() -> new RuntimeException("Admin not found"));
         
         if (admin.getRole() != UserRole.ADMIN) {
             throw new RuntimeException("Only administrators can create CA users");
         }
-        
-        // Proveri da li email već postoji
+
         if (userRepository.findByEmail(caUserDTO.getEmail()).isPresent()) {
             throw new RuntimeException("User with this email already exists");
         }
-        
-        // Generiši nasumičnu lozinku
+
         String randomPassword = passwordGenerator.generateRandomPassword(12);
-        
-        // Kreiraj CA korisnika
+
         User caUser = new User();
         caUser.setName(caUserDTO.getFirstName());
         caUser.setSurname(caUserDTO.getLastName());
@@ -217,12 +214,11 @@ public  Optional<User> getUserByUsername(String username) {
         caUser.setOrganisation(caUserDTO.getOrganization());
         caUser.setPassword(passwordEncoder.encode(randomPassword));
         caUser.setRole(UserRole.CA_USER);
-        caUser.setEnabled(true); // CA korisnici su odmah aktivni
-        caUser.setMustChangePassword(true); // Mora da promeni lozinku
+        caUser.setEnabled(true);
+        caUser.setMustChangePassword(true);
         
         User savedUser = userRepository.save(caUser);
-        
-        // Pošalji email sa lozinkom
+
         sendCAUserCredentials(caUser, randomPassword);
         
         return userMapper.toDto(savedUser);
@@ -235,7 +231,7 @@ public  Optional<User> getUserByUsername(String username) {
             "Email: %s\n" +
             "Temporary Password: %s\n\n" +
             "You must change this password on your first login.\n" +
-            "Login at: http://localhost:4200/login",
+            "Login at: https://localhost:4200/login",
             caUser.getEmail(),
             password
         );

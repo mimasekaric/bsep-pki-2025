@@ -110,12 +110,14 @@ public class AuthController {
 
 
     @PostMapping("/forgot-password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         passwordResetService.initiatePasswordReset(request.email());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/reset-password")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
         try {
             passwordResetService.finalizePasswordReset(request.token(), request.newPassword());
