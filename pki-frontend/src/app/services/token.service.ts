@@ -15,7 +15,7 @@ export interface TokenSession {
   providedIn: 'root'
 })
 export class TokenService {
-  private apiUrl = 'http://localhost:8080/api/auth';
+  private apiUrl = 'https://localhost:8443/api/auth';
 
    private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('jwt_token'); 
