@@ -950,9 +950,8 @@ public class CertificateService {
         userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + ownerId));
 
-        List<Certificate> userCertificates = certificateRepository.findByOwnerIdAndType(
-                ownerId,
-                CertificateType.INTERMEDIATE
+        List<Certificate> userCertificates = certificateRepository.findByOwner_Id(
+                ownerId
         );
 
         return userCertificates.stream()

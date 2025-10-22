@@ -117,7 +117,7 @@ export class CertificateListComponent implements OnInit {
             this.loadCertificates(); 
           },
           error: (err) => {
-      
+          this.loadCertificates(); 
           }
         });
       }
