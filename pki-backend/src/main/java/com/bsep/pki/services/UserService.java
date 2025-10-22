@@ -48,7 +48,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 @RequiredArgsConstructor
 public class UserService implements IUserService, UserDetailsService {
