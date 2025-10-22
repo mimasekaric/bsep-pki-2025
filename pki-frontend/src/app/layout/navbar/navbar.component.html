@@ -1,33 +1,60 @@
 <nav class="app-navbar">
+  <!-- Magični particles u pozadini -->
+  <div class="navbar-particles"></div>
+  
   <div class="navbar-container">
-    <!-- Brend/Logo -->
-    <a class="navbar-brand" routerLink="/">PKI App</a>
+    <!-- Brend/Logo sa slikom -->
+    <a class="navbar-brand" routerLink="/">
+      <img src="assets/Logo (1).png" alt="PKI Logo" class="navbar-logo">
+    </a>
 
     <!-- Linkovi -->
     <div class="navbar-links">
       <!-- Levi deo -->
       <ul class="nav-group">
         <li *ngIf="isLoggedIn && !isAdmin && !isCaUser && !mustChangePassword">
-          <a routerLink="/csr/upload" routerLinkActive="active-link">Kreiraj CSR</a>
+          <a routerLink="/csr/upload" routerLinkActive="active-link">
+            <span>Kreiraj CSR</span>
+          </a>
         </li>
         <li *ngIf="isLoggedIn && (isAdmin || isCaUser) && !mustChangePassword">
-          <a routerLink="/csr/list-pending" routerLinkActive="active-link">CSR Zahtevi</a>
+          <a routerLink="/csr/list-pending" routerLinkActive="active-link">
+            <span>CSR Zahtevi</span>
+          </a>
+        </li>
+        <li *ngIf="isLoggedIn && (isAdmin || isCaUser) && !mustChangePassword">
+          <a routerLink="/issue-certificate" routerLinkActive="active-link">
+            <span>Dodeli Sertifikat</span>
+          </a>
+        </li>
+        <li *ngIf="isLoggedIn && isCaUser && !mustChangePassword">
+          <a routerLink="/template" routerLinkActive="active-link">
+            <span>Napravi Šablon</span>
+          </a>
         </li>
          <li *ngIf="isLoggedIn">
-          <a routerLink="/certificates" routerLinkActive="active-link">Moji Sertifikati</a>
+          <a routerLink="/certificates" routerLinkActive="active-link">
+            <span>Moji Sertifikati</span>
+          </a>
         </li>
       </ul>
 
       <!-- Desni deo -->
-      <ul class="nav-group">
+      <ul class="nav-group nav-group-right">
         <li *ngIf="!isLoggedIn">
-          <a routerLink="/login" routerLinkActive="active-link">Login</a>
+          <a routerLink="/login" routerLinkActive="active-link" class="auth-link">
+            <span>Login</span>
+          </a>
         </li>
         <li *ngIf="!isLoggedIn">
-          <a routerLink="/register" routerLinkActive="active-link">Register</a>
+          <a routerLink="/register" routerLinkActive="active-link" class="auth-link register-btn">
+            <span>Register</span>
+          </a>
         </li>
         <li *ngIf="isLoggedIn">
-          <a (click)="logout()" style="cursor: pointer;">Logout</a>
+          <a (click)="logout()" class="auth-link logout-btn">
+            <span>Logout</span>
+          </a>
         </li>
       </ul>
     </div>
