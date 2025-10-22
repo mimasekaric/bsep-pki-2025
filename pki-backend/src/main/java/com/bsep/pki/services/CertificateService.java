@@ -305,76 +305,48 @@ public class CertificateService {
 
     public java.security.cert.Certificate[] loadCertificateChainById(Long certificateId) {
         try {
-            Certificate certificate = certificateRepository.findById(certificateId)
+            List<java.security.cert.Certificate> chain = new ArrayList<>();
+
+            Certificate currentDbCert = certificateRepository.findById(certificateId)
                     .orElseThrow(() -> new EntityNotFoundException("Certificate not found", null));
 
-            Keystore keystore = keystoreRepository.findById(certificate.getKeystore().getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Keystore not found", null));
+            // Petlja koja se vrti dok ne dođemo do Root-a
+            while (currentDbCert != null) {
+                Keystore keystoreInfo = currentDbCert.getKeystore();
+                KeyStore ks = loadKeystore(keystoreInfo); // Helper metoda za učitavanje keystore-a
 
-            KeyStore ks = KeyStore.getInstance("PKCS12");
-
-            String decryptedPassword = cryptoService.decryptAES(keystore.getEncryptedPassword());
-
-            try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystore.getId() + ".p12")) {
-                ks.load(fis, decryptedPassword.toCharArray());
-            }
-
-            System.out.println("=== Certificate Chain Debug ===");
-            System.out.println("Certificate ID: " + certificateId);
-            System.out.println("Certificate Alias: " + certificate.getAlias());
-            System.out.println("Keystore ID: " + keystore.getId());
-
-            // Get the complete certificate chain
-            java.security.cert.Certificate[] chain = ks.getCertificateChain(certificate.getAlias());
-
-            System.out.println("Raw chain length: " + (chain != null ? chain.length : "null"));
-
-            if (chain != null) {
-                for (int i = 0; i < chain.length; i++) {
-                    if (chain[i] instanceof X509Certificate) {
-                        X509Certificate x509Cert = (X509Certificate) chain[i];
-                        System.out.println("Chain[" + i + "] Subject: " + x509Cert.getSubjectX500Principal().getName());
-                        System.out.println("Chain[" + i + "] Issuer: " + x509Cert.getIssuerX500Principal().getName());
-                        System.out.println("Chain[" + i + "] Serial: " + x509Cert.getSerialNumber());
-                    }
+                java.security.cert.Certificate certFromKs = ks.getCertificate(currentDbCert.getAlias());
+                if (certFromKs == null) {
+                    throw new IllegalStateException("Certificate with alias " + currentDbCert.getAlias() + " not found in its keystore.");
                 }
-            }
+                chain.add(certFromKs);
 
-            if (chain == null || chain.length == 0) {
-                System.out.println("No certificate chain found, trying to get single certificate");
-                // If no chain exists, return just the certificate itself
-                X509Certificate cert = (X509Certificate) ks.getCertificate(certificate.getAlias());
-                if (cert != null) {
-                    System.out.println("Found single certificate: " + cert.getSubjectX500Principal().getName());
-
-                    // Debug: Check for SANs in the certificate
-                    try {
-                        Collection<List<?>> sans = cert.getSubjectAlternativeNames();
-                        if (sans != null && !sans.isEmpty()) {
-                            System.out.println("=== SANs Found in Certificate ===");
-                            for (List<?> san : sans) {
-                                System.out.println("SAN Type: " + san.get(0) + ", Value: " + san.get(1));
-                            }
-                            System.out.println("=== End SANs Debug ===");
-                        } else {
-                            System.out.println("No SANs found in certificate");
-                        }
-                    } catch (Exception e) {
-                        System.out.println("Error reading SANs: " + e.getMessage());
-                    }
-
-                    return new java.security.cert.Certificate[]{cert};
+                // Proveravamo da li smo stigli do samopotpisanog (Root) sertifikata
+                if (currentDbCert.getIssuerSerialNumber() == null || currentDbCert.getIssuerSerialNumber().equals(currentDbCert.getSerialNumber())) {
+                    break; // Stigli smo do Root-a
                 }
-                throw new EntityNotFoundException("Certificate not found in keystore", null);
+
+                // Prelazimo na izdavaoca
+                currentDbCert = certificateRepository.findBySerialNumber(currentDbCert.getIssuerSerialNumber())
+                        .orElse(null); // .orElse(null) da bi petlja stala ako nema izdavaoca
             }
 
-            System.out.println("=== End Certificate Chain Debug ===");
-            return chain;
+            // Vraćamo lanac kao niz
+            return chain.toArray(new java.security.cert.Certificate[0]);
+
         } catch (Exception e) {
-            System.err.println("Failed to load certificate chain: " + e.getMessage());
-            e.printStackTrace();
-            throw new EntityNotFoundException("Failed to load certificate chain from keystore", e);
+            // ... vaš exception handling
+            throw new EntityNotFoundException("Failed to load certificate chain", e);
         }
+    }
+
+    private KeyStore loadKeystore(Keystore keystoreInfo) throws Exception {
+        KeyStore ks = KeyStore.getInstance("PKCS12");
+        String decryptedPassword = cryptoService.decryptAES(keystoreInfo.getEncryptedPassword());
+        try (FileInputStream fis = new FileInputStream("data/keystores/keystore_" + keystoreInfo.getId() + ".p12")) {
+            ks.load(fis, decryptedPassword.toCharArray());
+        }
+        return ks;
     }
 
 
