@@ -1,0 +1,98 @@
+<div class="certificate-container">
+  <div class="certificate-card">
+    
+    <div class="certificate-header">
+      <h2>Kreiranje Šablona za Sertifikate</h2>
+      <p>Definišite politiku i podrazumevane vrednosti za buduće sertifikate.</p>
+    </div>
+
+    <form [formGroup]="templateForm" (ngSubmit)="onSubmit()" class="certificate-form">
+      
+      <!-- Sekcija 1: Osnovne Informacije -->
+      <div class="form-section">
+        <h3 class="section-title">1. Osnovne Informacije</h3>
+        
+        <div class="form-group">
+          <label for="templateName">Naziv Šablona *</label>
+          <input type="text" id="templateName" formControlName="templateName" class="form-control" [class.error]="hasError('templateName')" placeholder="npr. FTN Server Šablon"/>
+          <span class="error-message" *ngIf="hasError('templateName')">{{ getErrorMessage('templateName') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="issuer">CA Izdavač (Issuer) *</label>
+          <select id="issuer" formControlName="issuerSerialNumber" class="form-control" [class.error]="hasError('issuerSerialNumber')">
+            <option [ngValue]="null" disabled>Izaberite CA sertifikat...</option>
+            <option *ngFor="let issuer of availableIssuers" [value]="issuer.serialNumber">
+              CN: {{ issuer.commonName }} (važi do: {{ issuer.validTo | date:'dd.MM.yyyy' }})
+            </option>
+          </select>
+          <span class="error-message" *ngIf="hasError('issuerSerialNumber')">
+            Morate izabrati CA izdavaoca za ovaj šablon.
+          </span>
+        </div>
+      </div>
+
+      <!-- Sekcija 2: Politika i Pravila -->
+      <div class="form-section">
+        <h3 class="section-title">2. Politika i Pravila</h3>
+
+        <div class="form-group">
+          <label for="ttlDays">Maksimalno trajanje (TTL u danima) *</label>
+          <input type="number" id="ttlDays" formControlName="ttlDays" class="form-control" [class.error]="hasError('ttlDays')" placeholder="365"/>
+          <span class="error-message" *ngIf="hasError('ttlDays')">{{ getErrorMessage('ttlDays') }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="commonNameRegex">Common Name - Validacioni Regex (Opciono)</label>
+          <input type="text" id="commonNameRegex" formControlName="commonNameRegex" class="form-control" placeholder="npr. .*\.ftn\.com$"/>
+          <small class="form-hint">Regularni izraz za validaciju Common Name polja. Ostavite prazno ako nije potrebno.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="sanRegex">Subject Alternative Names - Validacioni Regex (Opciono)</label>
+          <input type="text" id="sanRegex" formControlName="sanRegex" class="form-control" placeholder="npr. .*\.mojdomen\.rs$"/>
+          <small class="form-hint">Regularni izraz za validaciju SAN vrednosti. Ostavite prazno ako nije potrebno.</small>
+        </div>
+      </div>
+      
+      <!-- Sekcija 3: Podrazumevane Ekstenzije -->
+      <div class="form-section extensions-accordion">
+        <h3 class="section-title">3. Podrazumevane Ekstenzije</h3>
+
+        <!-- Podsekcija: Key Usage -->
+        <div class="extension-item" formArrayName="keyUsage">
+          <h4 class="extension-subtitle">Podrazumevana Namena Ključa (Key Usage)</h4>
+          <div class="checkbox-grid">
+            <label *ngFor="let option of keyUsageOptions; let i = index" class="checkbox-container">
+              <input type="checkbox" [formControlName]="i" /> {{ option.label }}
+            </label>
+          </div>
+        </div>
+
+        <!-- Podsekcija: Extended Key Usage -->
+        <div class="extension-item" formArrayName="extendedKeyUsage">
+          <h4 class="extension-subtitle">Podrazumevana Proširena Namena Ključa (EKU)</h4>
+          <div class="checkbox-grid">
+            <label *ngFor="let option of extendedKeyUsageOptions; let i = index" class="checkbox-container">
+              <input type="checkbox" [formControlName]="i" /> {{ option.label }}
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Poruke o uspehu ili grešci -->
+      <div class="global-error" *ngIf="errorMessage">
+        <p>{{ errorMessage }}</p>
+      </div>
+      <div class="success-message" *ngIf="successMessage">
+        <p>{{ successMessage }}</p>
+      </div>
+
+      <!-- Dugme za slanje forme -->
+      <button type="submit" class="certificate-button" [disabled]="templateForm.invalid || isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        {{ isLoading ? 'Kreiranje...' : 'Kreiraj Šablon' }}
+      </button>
+    </form>
+  </div>
+</div>

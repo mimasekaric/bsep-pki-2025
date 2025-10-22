@@ -1,2 +1,3 @@
 /postgres_data
 pki-backend/logs/pki-system.log
+/postgres_data/

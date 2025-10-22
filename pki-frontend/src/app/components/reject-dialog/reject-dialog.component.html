@@ -1,0 +1,23 @@
+<h2 mat-dialog-title>Odbijanje CSR Zahteva #{{ data.csr.id }}</h2>
+
+<mat-dialog-content>
+  <p class="dialog-description">Molimo unesite razlog za odbijanje zahteva.</p>
+  
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Razlog odbijanja</mat-label>
+    <textarea 
+      matInput 
+      [(ngModel)]="rejectionReason" 
+      name="rejectionReason"
+      rows="4"
+      placeholder="Unesite detaljno obrazloženje..."></textarea>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Otkaži</button>
+  <button mat-raised-button color="warn" (click)="onConfirm()" 
+          [disabled]="!rejectionReason.trim()">
+    Potvrdi Odbijanje
+  </button>
+</mat-dialog-actions>

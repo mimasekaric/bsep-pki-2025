@@ -4,6 +4,7 @@ import com.bsep.pki.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.UUID;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
+@Getter
 @Table(name="users")
 public class User {
 
@@ -24,7 +26,7 @@ public class User {
      String surname;
     @Column(nullable = false)
      String password;
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
      String email;
     @Column(nullable = false)
      UserRole role;
@@ -33,6 +35,17 @@ public class User {
     @Column(nullable = false)
     private boolean enabled;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean mustChangePassword = false;
+
     private String verificationToken;
+
+    public String getOrganisation() {
+        return organisation;
+    }
+
+    public String getRoleAsString() {
+        return role.toString();
+    }
 
 }

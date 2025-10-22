@@ -1,0 +1,61 @@
+<div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h2>Prijava</h2>
+        <p>Dobrodošli nazad</p>
+      </div>
+  
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="form-group">
+          <label for="email">Email adresa</label>
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            [class.error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            placeholder="unesite@email.com"
+          >
+          <div *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="error-message">
+            <span *ngIf="loginForm.get('email')?.errors?.['required']">Email je obavezan</span>
+            <span *ngIf="loginForm.get('email')?.errors?.['email']">Unesite validan email</span>
+          </div>
+        </div>
+  
+        <div class="form-group">
+          <label for="password">Lozinka</label>
+          <input 
+            type="password" 
+            id="password" 
+            formControlName="password"
+            class="form-control"
+            [class.error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            placeholder="Unesite lozinku"
+          >
+          <div *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="error-message">
+            <span *ngIf="loginForm.get('password')?.errors?.['required']">Lozinka je obavezna</span>
+            <span *ngIf="loginForm.get('password')?.errors?.['minlength']">Lozinka mora imati najmanje 6 karaktera</span>
+          </div>
+          <p>Zaboravili ste lozinku? <a (click)="goToForgotPassword()" class="auth-link">Resetujte lozinku</a></p>
+        </div>
+          <div id="recaptcha-container" class="form-group"></div>
+  
+        <div *ngIf="errorMessage" class="error-message global-error">
+          {{ errorMessage }}
+        </div>
+  
+        <button 
+          type="submit" 
+          class="auth-button"
+          [disabled]="loginForm.invalid || isLoading"
+        >
+          <span *ngIf="!isLoading">Prijavi se</span>
+          <span *ngIf="isLoading">Prijavljivanje...</span>
+        </button>        
+      </form>
+  
+      <div class="auth-footer">
+        <p>Nemate nalog? <a (click)="goToRegister()" class="auth-link">Registrujte se</a></p>        
+      </div>
+    </div>
+  </div>
