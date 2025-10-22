@@ -117,8 +117,7 @@ export class CertificateListComponent implements OnInit {
             this.loadCertificates(); 
           },
           error: (err) => {
-            alert(`Greška: ${err.error?.message || 'Nije moguće povući sertifikat.'}`);
-     
+      
           }
         });
       }

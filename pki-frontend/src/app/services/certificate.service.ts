@@ -28,6 +28,13 @@ export interface CertificateDetailsDTO {
   revoked: boolean;
 }
 
+export interface UserCertificateDTO {
+    userId: string; // UUID
+    certificatePem: string; // CELI sertifikat u PEM formatu
+    publicKeyPem: string; // Samo javni ključ iz sertifikata, ako ga backend može ekstrahovati
+    // ... ostali podaci o sertifikatu
+}
+
 export interface IssuerDto {
   serialNumber: string;
   commonName: string;
@@ -61,6 +68,19 @@ export class CertificateService {
 
   issueCertificate(certificateData: CertificateIssueDTO): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/issue`, certificateData);
+  }
+
+  getUserCertificate(userId: string): Observable<UserCertificateDTO> {
+    return this.http.get<UserCertificateDTO>(`${this.apiUrl}/${userId}/certificate`);
+  }
+
+   getMyPublicKey(): Observable<string> {
+    return this.http.get(`${this.apiUrl}/my-public-key`, { responseType: 'text' });
+  }
+
+
+  getPublicKeyForUser(email: string): Observable<string> {
+    return this.http.get(`${this.apiUrl}/public-key/${email}`, { responseType: 'text' });
   }
 
   getAvailableIssuers(): Observable<IssuerDto[]> {

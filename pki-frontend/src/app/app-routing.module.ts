@@ -14,6 +14,7 @@ import { TokensComponent } from './components/tokens/tokens.component';
 import { TemplateComponent } from './components/template/template.component';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 import { CertificateListComponent } from './components/certificate-list/certificate-list.component';
 import { AdminGuard } from './admin.guard';
 import { AdminOrCaUserGuard } from './aedmin-or-ca.guard';
@@ -31,6 +32,7 @@ const routes: Routes = [
   { path: 'csr/list-pending', component: CsrListComponent, canActivate: [CaGuard] },
   { path: 'admin', component: AdminComponent, canActivate: [AdminGuard] },
   { path: 'change-password', component: ChangePasswordComponent, canActivate: [CaGuard] },
+    { path: 'password-manager', component: PasswordManagerComponent, canActivate: [AuthGuard] },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'certificates', component: CertificateListComponent, canActivate: [AuthGuard] },

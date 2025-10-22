@@ -30,7 +30,7 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   isCaUser = false;
   availableSubjects: SubjectDto[] = [];
 
-  private currentUserId: number | null = null;
+  private currentUserId: string | null = null;
   private userSubscription: Subscription;
   private caUserOrganization: string | null = null;
 
@@ -246,15 +246,23 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
 
     const issuerControl = this.certificateForm.get('issuerSerialNumber');
     const subjectUserControl = this.certificateForm.get('subjectUserId'); 
+    const isCaControl = this.certificateForm.get('basicConstraints.isCa');
 
     if (this.isRootCertificate) {
       issuerControl?.clearValidators();
       issuerControl?.setValue(null);
       subjectUserControl?.clearValidators();
       subjectUserControl?.setValue(null);
+      
+      // Postavi isCa na false i zaključaj ga za root sertifikate
+      isCaControl?.setValue(false);
+      isCaControl?.disable();
     } else {
       issuerControl?.setValidators([Validators.required]);
       subjectUserControl?.setValidators([Validators.required]);
+      
+      // Otključaj isCa za ne-root sertifikate
+      isCaControl?.enable();
     }
     issuerControl?.updateValueAndValidity();
     subjectUserControl?.updateValueAndValidity(); 

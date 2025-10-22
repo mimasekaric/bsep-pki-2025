@@ -151,8 +151,8 @@
       <div class="form-section extensions-accordion">
         <h3 class="section-title">4. Ekstenzije Sertifikata</h3>
         
-        <!-- Podsekcija: Basic Constraints -->
-        <div class="extension-item" formGroupName="basicConstraints">
+        <!-- Podsekcija: Basic Constraints - Prikazuje se samo za ne-root sertifikate -->
+        <div class="extension-item" formGroupName="basicConstraints" *ngIf="!isRootCertificate">
           <h4 class="extension-subtitle">Osnovna Ograničenja (Basic Constraints)</h4>
           <div class="form-group">
             <label class="checkbox-container">

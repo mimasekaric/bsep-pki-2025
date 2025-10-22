@@ -36,7 +36,7 @@ export interface AuthResponse {
 }
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   surname: string;
   email: string;
@@ -110,7 +110,7 @@ export class AuthService {
     const token = this.getToken();
     if (!token) {
       return {
-        id: 0,
+        id: '',
         name: '',
         surname: '',
         email: email,
@@ -124,7 +124,7 @@ export class AuthService {
       const payload = JSON.parse(atob(token.split('.')[1]));
       
       return {
-        id: payload.sub ? parseInt(payload.sub) : 0,
+        id: payload.sub ? (payload.sub) : '',
         name: payload.name || '',
         surname: payload.surname || '',
         email: payload.sub || email,
@@ -134,7 +134,7 @@ export class AuthService {
     } catch (error) {
       console.error('Error decoding JWT token:', error);
       return {
-        id: 0,
+        id: '',
         name: '',
         surname: '',
         email: email,

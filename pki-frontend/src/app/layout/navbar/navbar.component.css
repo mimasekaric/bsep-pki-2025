@@ -1,67 +1,202 @@
+/* Magični navbar sa viliniskim efektima ✨ */
 .app-navbar {
-  background-color: #2d1b69; /* Vaša tamno ljubičasta boja */
+  position: relative;
+  background: linear-gradient(135deg, #1a0b3d 0%, #2d1b69 50%, #4a1d8f 100%);
   color: white;
-  padding: 16px 32px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 12px 48px;
+  box-shadow: 0 8px 32px rgba(138, 43, 226, 0.3),
+              0 2px 8px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 2px solid rgba(186, 104, 255, 0.3);
+  overflow: hidden;
+}
+
+/* Magični particles u pozadini */
+.navbar-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(186, 104, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(2px 2px at 80% 10%, rgba(138, 43, 226, 0.5), transparent),
+    radial-gradient(1px 1px at 90% 60%, rgba(255, 255, 255, 0.5), transparent);
+  background-size: 200% 200%;
+  animation: sparkle 8s ease-in-out infinite;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    background-position: 0% 0%;
+    opacity: 0.4;
+  }
+  50% { 
+    background-position: 100% 100%;
+    opacity: 0.7;
+  }
 }
 
 /* Kontejner koji raspoređuje elemente */
 .navbar-container {
-  display: flex; /* KLJUČNO: Postavlja elemente u red */
-  justify-content: space-between; /* Gura brend levo, a linkove desno */
-  align-items: center; /* Vertikalno centrira sve */
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
+  z-index: 10;
 }
 
-/* Brend/Logo */
+/* Brend/Logo sa slikom */
 .navbar-brand {
-  font-size: 24px;
-  font-weight: 600;
-  color: white;
+  display: flex;
+  align-items: center;
   text-decoration: none;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.navbar-brand:hover {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 4px 12px rgba(186, 104, 255, 0.6));
+}
+
+.navbar-logo {
+  height: 60px;
+  width: auto;
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.3));
 }
 
 /* Kontejner za sve grupe linkova */
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 32px; /* Razmak između leve i desne grupe linkova */
+  gap: 48px;
 }
 
 /* Grupa linkova (<ul>) */
 .nav-group {
-  display: flex; /* KLJUČNO: Postavlja <li> elemente u red */
-  list-style-type: none; /* Uklanja tačkice ispred <li> */
+  display: flex;
+  list-style-type: none;
   margin: 0;
   padding: 0;
-  gap: 24px; /* Razmak između pojedinačnih linkova */
+  gap: 8px;
+}
+
+.nav-group-right {
+  gap: 12px;
 }
 
 /* Stil za linkove (<a>) */
 .nav-group a {
-  color: #d1c4e9; /* Svetlija ljubičasta */
+  display: flex;
+  align-items: center;
+  color: #e1bee7;
   text-decoration: none;
   font-weight: 500;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  position: relative;
   transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(186, 104, 255, 0.2);
+  cursor: pointer;
+}
+
+.nav-group a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(186, 104, 255, 0.3));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 /* Efekat na hover */
 .nav-group a:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background: rgba(186, 104, 255, 0.2);
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(186, 104, 255, 0.4),
+              0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.nav-group a:hover::before {
+  opacity: 1;
 }
 
 /* Stil za aktivni link */
 .nav-group a.active-link {
-  background-color: #8b45ff; /* Jarka ljubičasta */
+  background: linear-gradient(135deg, #8b45ff 0%, #ba68ff 100%);
   color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(138, 69, 255, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.nav-group a.active-link::before {
+  opacity: 0;
+}
+
+.nav-group a.active-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(138, 69, 255, 0.6),
+              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Specijalni stilovi za auth linkove */
+.auth-link {
   font-weight: 600;
 }
 
-/* Opciono: Sakrivanje mobilnog "hamburger" menija jer ga nismo implementirali u ovom CSS-u */
-/* Ako vam treba, logika je složenija i zahteva JavaScript */
-.navbar-toggler {
-  display: none;
+.register-btn {
+  background: linear-gradient(135deg, rgba(138, 69, 255, 0.3) 0%, rgba(186, 104, 255, 0.3) 100%);
+  border-color: rgba(186, 104, 255, 0.5);
+}
+
+.register-btn:hover {
+  background: linear-gradient(135deg, rgba(138, 69, 255, 0.5) 0%, rgba(186, 104, 255, 0.5) 100%);
+}
+
+.logout-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 69, 96, 0.3) 0%, rgba(255, 104, 128, 0.3) 100%);
+  border-color: rgba(255, 104, 128, 0.5);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .app-navbar {
+    padding: 12px 24px;
+  }
+  
+  .navbar-links {
+    gap: 24px;
+  }
+  
+  .nav-group {
+    gap: 6px;
+  }
+  
+  .brand-text {
+    font-size: 20px;
+  }
+  
+  .navbar-logo {
+    height: 50px;
+  }
+  
+  .nav-group a {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
 }

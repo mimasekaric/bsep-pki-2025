@@ -21,6 +21,7 @@ import { TemplateSelectionModalComponent } from './components/template-selection
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
 import { NavbarComponent } from './layout/navbar/navbar.component';
+import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -36,7 +37,7 @@ import { CertificateListComponent } from './components/certificate-list/certific
 import { ParseDnPipe } from './pipes/parse-dn.pipe';
 import { RevokeDialogComponent } from './components/revoke-dialog/revoke-dialog.component';
 import {NgxCaptchaModule } from 'ngx-captcha';
-
+import { Router } from '@angular/router';
 
 
 @NgModule({
@@ -62,7 +63,8 @@ import {NgxCaptchaModule } from 'ngx-captcha';
     TemplateSelectionModalComponent,
     CertificateListComponent,
     ParseDnPipe,
-    RevokeDialogComponent
+    RevokeDialogComponent,
+    PasswordManagerComponent
   ],
   imports: [
     BrowserModule,

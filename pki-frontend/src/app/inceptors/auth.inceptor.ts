@@ -20,31 +20,20 @@ export class AuthInterceptor implements HttpInterceptor {
   ) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    
-    // ==========================================================
-    // ==== NOVI DEO: DODAVANJE TOKENA U ODLAZNI ZAHTEV =========
-    // ==========================================================
-    
-    // 1. Uzmi token iz AuthService-a (koji ga čita iz localStorage)
-    const token = this.authService.getToken();
-    let authReq = request; // Po defaultu, zahtev ostaje nepromenjen
+ const token = this.authService.getToken(); // Pretpostavimo da ova metoda ispravno vraća token
 
-    // 2. Ako token postoji, kloniraj zahtev i dodaj mu Authorization header
+    // 2. Kloniraj zahtev i dodaj Authorization header, AKO token postoji
     if (token) {
-      authReq = request.clone({
-        headers: request.headers.set('Authorization', `Bearer ${token}`)
+      request = request.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`
+        }
       });
-      console.log('AuthInterceptor: Token found, adding Authorization header.');
+      console.log('Token je pronadjen i Authorization header je postavljen.'); // Log za debug
     } else {
-      console.warn('AuthInterceptor: No token found. Sending request without token.');
+      console.log('Token NIJE pronadjen, Authorization header NIJE postavljen.'); // Log za debug
     }
-    
-    // ==========================================================
-    // ==== VAŠ POSTOJEĆI DEO: RUKOVANJE GREŠKAMA ===============
-    // ==========================================================
-
-    // 3. Prosledi novi (ili stari) zahtev dalje i uhvati potencijalne greške
-    return next.handle(authReq).pipe(
+    return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         // 4. Ako server vrati 401, to znači da je token nevalidan ili istekao
         if (error.status === 401) {
