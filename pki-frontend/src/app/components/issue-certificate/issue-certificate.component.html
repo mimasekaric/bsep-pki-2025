@@ -139,6 +139,7 @@
             <label for="validTo">Važi do *</label>
             <input type="datetime-local" id="validTo" formControlName="validTo" class="form-control" [class.error]="hasError('validTo')" [min]="issuerValidFrom" [max]="issuerValidTo"/>
             <span class="error-message" *ngIf="hasError('validTo')">{{ getErrorMessage('validTo') }}</span>
+            <span class="error-message" *ngIf="ttlErrorMessage">{{ ttlErrorMessage }}</span>
           </div>
         </div>
         <!-- Pomoćni tekst koji se prikazuje samo kada je izabran izdavač -->
