@@ -20,7 +20,19 @@ export class AuthInterceptor implements HttpInterceptor {
   ) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+ const token = this.authService.getToken(); // Pretpostavimo da ova metoda ispravno vraća token
 
+    // 2. Kloniraj zahtev i dodaj Authorization header, AKO token postoji
+    if (token) {
+      request = request.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      console.log('Token je pronadjen i Authorization header je postavljen.'); // Log za debug
+    } else {
+      console.log('Token NIJE pronadjen, Authorization header NIJE postavljen.'); // Log za debug
+    }
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401) {

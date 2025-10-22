@@ -8,6 +8,7 @@ import { AuthGuard } from './auth.guard';
 import { TokensComponent } from './components/tokens/tokens.component';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
+import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -17,6 +18,7 @@ const routes: Routes = [
   { path: 'verify-email', component: EmailVerificationComponent },
   { path: 'issue-certificate', component: IssueCertificateComponent },
   { path: 'csr/upload', component: CsrUploadComponent },
+    { path: 'password-manager', component: PasswordManagerComponent, canActivate: [AuthGuard] },
   { path: 'csr/list-pending', component: CsrListComponent, canActivate: [AuthGuard] },
   { path: '**', redirectTo: '/login' }
 ];

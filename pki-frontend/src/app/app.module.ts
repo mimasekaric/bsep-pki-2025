@@ -16,6 +16,7 @@ import {HTTP_INTERCEPTORS } from '@angular/common/http';
 import { CsrUploadComponent } from './components/csr-upload/csr-upload.component';
 import { CsrListComponent } from './components/csr-list/csr-list.component';
 import { NavbarComponent } from './layout/navbar/navbar.component';
+import { PasswordManagerComponent } from './components/password-manage/password-manage.component';
 
 @NgModule({
   declarations: [
@@ -27,7 +28,8 @@ import { NavbarComponent } from './layout/navbar/navbar.component';
     TokensComponent,
     CsrUploadComponent,
     CsrListComponent,
-    NavbarComponent
+    NavbarComponent,
+    PasswordManagerComponent
   ],
   imports: [
     BrowserModule,

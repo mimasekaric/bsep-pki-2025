@@ -8,6 +8,9 @@
       <!-- Levi deo -->
       <ul class="nav-group">
         <li *ngIf="isLoggedIn && !isAdmin && !isCaUser">
+          <a routerLink="/password-manager" routerLinkActive="active-link">Upravljanje lozinkama</a>
+        </li>
+        <li *ngIf="isLoggedIn && !isAdmin && !isCaUser">
           <a routerLink="/csr/upload" routerLinkActive="active-link">Kreiraj CSR</a>
         </li>
         <li *ngIf="isLoggedIn && (isAdmin || isCaUser)">
