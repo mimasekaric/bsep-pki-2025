@@ -995,8 +995,8 @@ public class CertificateService {
     public X509Certificate getUserValidEndEntityCertificate(UUID userId) {
         // Pronađi  najnoviji END_ENTITY sertifikat koji pripada korisniku i nije opozvani.
 
-        Optional<Certificate> latestValidCertEntityOptional = certificateRepository.findTopByOwner_IdAndTypeAndRevokedFalseAndValidToAfterOrderByValidFromDesc(
-                userId, CertificateType.END_ENTITY, LocalDateTime.now()
+        Optional<Certificate> latestValidCertEntityOptional = certificateRepository.findTopByOwner_IdAndTypeOrderByValidFromAsc(
+                userId, CertificateType.END_ENTITY
         );
 
         if (latestValidCertEntityOptional.isEmpty()) {

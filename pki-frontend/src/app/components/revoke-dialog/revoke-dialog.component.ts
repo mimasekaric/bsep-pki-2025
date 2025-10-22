@@ -19,9 +19,20 @@ export interface RevokeDialogResult {
   styleUrls: ['./revoke-dialog.component.css']
 })
 export class RevokeDialogComponent {
-  
+  reasonEntries = [
+    { key: "unspecified", display: "Nespecifikovan razlog" },
+    { key: "keyCompromise", display: "Kompromitovan ključ" },
+    { key: "cACompromise", display: "Kompromitovan CA" },
+    { key: "affiliationChanged", display: "Promenjena afilijacija" },
+    { key: "superseded", display: "Zamenjen" },
+    { key: "cessationOfOperation", display: "Prestanak rada" },
+    { key: "certificateHold", display: "Zadržavanje sertifikata" },
+    { key: "removeFromCRL", display: "Uklonjen iz CRL-a" },
+    { key: "privilegeWithdrawn", display: "Oduzete privilegije" },
+    { key: "aACompromise", display: "Kompromitovan AA" }
+  ];
   reason = '';
-
+ selectedReasonKey: string | null = null; 
   constructor(
     public dialogRef: MatDialogRef<RevokeDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: RevokeDialogData
@@ -33,8 +44,12 @@ export class RevokeDialogComponent {
   }
 
   onConfirm(): void {
-    // Zatvori dijalog i vrati rezultat
-    if (!this.reason.trim()) return;
+       if (!this.selectedReasonKey) return; // Proveravamo da li je razlog izabran
+
+    // Konvertujemo izabrani ključ u odgovarajući numerički kod
+    const reasonCode = this.selectedReasonKey;
+    this.reason = this.selectedReasonKey;
+
     this.dialogRef.close({ revoked: true, reason: this.reason });
   }
 }
