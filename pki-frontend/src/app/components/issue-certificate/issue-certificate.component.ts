@@ -33,7 +33,10 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   private currentUserId: string | null = null;
   private userSubscription: Subscription;
   private caUserOrganization: string | null = null;
-
+  private validToSubscription: Subscription = new Subscription();
+  private validFromSubscription: Subscription = new Subscription();
+  ttlErrorMessage: string = '';
+  templateMaxValidTo: string = ''; 
 
   myTemplates: TemplateInfoDTO[] = [];
   selectedTemplate: TemplateInfoDTO | null = null;
@@ -76,6 +79,12 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();
+    }
+    if (this.validFromSubscription) {
+      this.validFromSubscription.unsubscribe();
+    }
+    if (this.validToSubscription) {
+        this.validToSubscription.unsubscribe();
     }
   }
 
@@ -185,6 +194,39 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
       validTo: this.formatDateForInput(oneYearLater)
     });
 
+    if (this.validFromSubscription) this.validFromSubscription.unsubscribe();
+    if (this.validToSubscription) this.validToSubscription.unsubscribe();
+
+    // Pretplata na 'validFrom' za ažuriranje MAKSIMALNOG datuma
+    this.validFromSubscription = this.certificateForm.get('validFrom')!.valueChanges.subscribe(validFromValue => {
+      // ... postojeća logika za postavljanje templateMaxValidTo ostaje ista ...
+      if (this.selectedTemplate && this.selectedTemplate.ttlDays) {
+        const fromDate = new Date(validFromValue);
+        if (!isNaN(fromDate.getTime())) {
+          const maxDateFromTtl = new Date(fromDate.getTime());
+          const daysToAdd = Number(this.selectedTemplate.ttlDays);
+          maxDateFromTtl.setDate(maxDateFromTtl.getDate() + daysToAdd);
+          let finalMaxDate = maxDateFromTtl;
+          if (this.issuerValidToDate && this.issuerValidToDate < maxDateFromTtl) {
+            finalMaxDate = this.issuerValidToDate;
+          }
+          this.templateMaxValidTo = this.formatDateForInput(finalMaxDate);
+          const validToControl = this.certificateForm.get('validTo');
+          if (validToControl) {
+            const currentValidToDate = new Date(validToControl.value);
+            if (currentValidToDate > finalMaxDate) {
+              validToControl.setValue(this.templateMaxValidTo);
+            }
+          }
+        }
+      }
+      this.validateTtl(); 
+    });
+
+    this.validToSubscription = this.certificateForm.get('validTo')!.valueChanges.subscribe(() => {
+        this.validateTtl();
+    });
+
     this.certificateForm.get('basicConstraints.isCa')?.valueChanges.subscribe(isCa => {
       const pathLenControl = this.certificateForm.get('basicConstraints.pathLen');
       isCa ? pathLenControl?.enable() : pathLenControl?.disable();
@@ -204,6 +246,40 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+  }
+
+  private validateTtl(): void {
+    if (!this.selectedTemplate || !this.selectedTemplate.ttlDays) {
+      this.ttlErrorMessage = '';
+      return;
+    }
+
+    const validFromControl = this.certificateForm.get('validFrom');
+    const validToControl = this.certificateForm.get('validTo');
+
+    if (validFromControl?.value && validToControl?.value) {
+      const fromDate = new Date(validFromControl.value);
+      const toDate = new Date(validToControl.value);
+      
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+          this.ttlErrorMessage = '';
+          return;
+      }
+
+      const differenceInMs = toDate.getTime() - fromDate.getTime();
+      
+      const differenceInDays = Math.ceil(differenceInMs / (1000 * 60 * 60 * 24));
+
+      const maxDays = Number(this.selectedTemplate.ttlDays);
+
+      if (differenceInDays > maxDays) {
+        this.ttlErrorMessage = `Period važenja ne sme biti duži od ${maxDays} dana definisanih u šablonu.`;
+      } else {
+        this.ttlErrorMessage = ''; 
+      }
+    } else {
+        this.ttlErrorMessage = ''; 
+    }
   }
 
   onIssuerChange(event: any): void {
@@ -416,79 +492,78 @@ export class IssueCertificateComponent implements OnInit, OnDestroy {
   }
 
   applyTemplate(template: TemplateInfoDTO): void {
-    // 1. Resetujemo formu na početno stanje
+    // 1. Resetuje formu na početno, otključano stanje
     this.resetFormToEditable();
 
-    // --- NOVO: Postavljanje Izdavaoca (Issuer) ---
+    // 2. KLJUČNI DEO: Postavljanje izdavaoca i njegovih granica
     if (template.issuerSerialNumber) {
-        const issuerControl = this.certificateForm.get('issuerSerialNumber');
-        
-        // Pronalazimo izdavaoca u listi dostupnih
-        const selectedIssuer = this.availableIssuers.find(i => i.serialNumber === template.issuerSerialNumber);
-        
-        if (selectedIssuer) {
-            // Postavljamo vrednost u formu
-            issuerControl?.setValue(selectedIssuer.serialNumber);
-            issuerControl?.disable(); // Zaključavamo polje
+      // Pronalazimo odgovarajućeg izdavaoca u listi dostupnih
+      const selectedIssuer = this.availableIssuers.find(i => i.serialNumber === template.issuerSerialNumber);
+      
+      if (selectedIssuer) {
+        // A. Programski postavljamo vrednost u select polje za izdavaoca i zaključavamo ga
+        this.certificateForm.get('issuerSerialNumber')?.setValue(selectedIssuer.serialNumber);
+        this.certificateForm.get('issuerSerialNumber')?.disable();
 
-            // Ažuriramo datume važenja (kopirano iz logike onIssuerChange)
-            this.issuerValidFromDate = new Date(selectedIssuer.validFrom);
-            this.issuerValidToDate = new Date(selectedIssuer.validTo);
-            this.issuerValidFrom = this.formatDateForInput(this.issuerValidFromDate);
-            this.issuerValidTo = this.formatDateForInput(this.issuerValidToDate);
-        } else {
-            console.warn(`Izdavalac sa serijskim brojem ${template.issuerSerialNumber} nije pronađen u listi dostupnih.`);
-        }
+        // B. AŽURIRAMO PROMENLJIVE KOJE KONTROLIŠU MIN/MAX U HTML-U
+        // Ovo je ključno - sada će date pickeri "znati" za granice ovog izdavaoca
+        this.issuerValidFromDate = new Date(selectedIssuer.validFrom);
+        this.issuerValidToDate = new Date(selectedIssuer.validTo);
+        this.issuerValidFrom = this.formatDateForInput(this.issuerValidFromDate);
+        this.issuerValidTo = this.formatDateForInput(this.issuerValidToDate);
+      } else {
+        console.warn(`Izdavalac sa serijskim brojem ${template.issuerSerialNumber} iz šablona nije pronađen.`);
+      }
     }
-    // ---------------------------------------------
 
-    // 2. Postavljamo validatore za Common Name
+    // 3. Postavljanje validatora za Common Name (ostaje isto)
     if (template.commonNameRegex) {
       this.certificateForm.get('commonName')?.setValidators([Validators.required, Validators.pattern(template.commonNameRegex)]);
       this.certificateForm.get('commonName')?.updateValueAndValidity();
     }
 
-    // 3. Postavljamo i zaključavamo TTL (period važenja)
+    // 4. Postavljanje perioda važenja (TTL)
     if (template.ttlDays) {
         const validFromControl = this.certificateForm.get('validFrom');
         const validToControl = this.certificateForm.get('validTo');
         
-        // Uzimamo trenutnu vrednost 'validFrom' (koja je po defaultu 'danas')
         const fromDate = new Date(validFromControl?.value);
         const toDate = new Date(fromDate.getTime());
-        toDate.setDate(fromDate.getDate() + template.ttlDays);
 
-        // Provera da li izračunati datum izlazi van opsega izdavaoca
-        if (this.issuerValidToDate && toDate > this.issuerValidToDate) {
-             // Ako izlazi, postavljamo na maksimalni mogući datum izdavaoca
-             validToControl?.setValue(this.formatDateForInput(this.issuerValidToDate));
-        } else {
-             validToControl?.setValue(this.formatDateForInput(toDate));
-        }
+        // Koristimo ispravnu logiku za dodavanje dana
+        const daysToAdd = Number(template.ttlDays);
+        toDate.setDate(toDate.getDate() + daysToAdd);
         
-        validToControl?.disable();
+        // Određujemo konačni datum, uzimajući u obzir i validnost SADA POSTAVLJENOG izdavaoca
+        let finalDate = toDate;
+        if (this.issuerValidToDate && this.issuerValidToDate < toDate) {
+             finalDate = this.issuerValidToDate;
+        }
+
+        this.issuerValidTo = this.formatDateForInput(finalDate);
+        validToControl?.setValue(this.issuerValidTo);
     }
 
-    // 4. Postavljamo i zaključavamo Key Usage
+    // 5. Postavljanje i zaključavanje Key Usage i Extended Key Usage (ostaje isto)
     const keyUsageGroup = this.certificateForm.get('keyUsage') as FormGroup;
-    for (const backendKey of template.keyUsage) {
+    template.keyUsage.forEach(backendKey => {
       const formKey = this.keyUsageMap[backendKey];
       if (formKey) {
         keyUsageGroup.get(formKey)?.setValue(true);
         keyUsageGroup.get(formKey)?.disable();
       }
-    }
+    });
 
-    // 5. Postavljamo i zaključavamo Extended Key Usage
     const extendedKeyUsageGroup = this.certificateForm.get('extendedKeyUsage') as FormGroup;
-    for (const backendKey of template.extendedKeyUsage) {
+    template.extendedKeyUsage.forEach(backendKey => {
         const formKey = this.extendedKeyUsageMap[backendKey];
         if (formKey) {
             extendedKeyUsageGroup.get(formKey)?.setValue(true);
             extendedKeyUsageGroup.get(formKey)?.disable();
         }
-    }
+    });
   }
+
 
 
 private lockOrganizationForCaUser(): void {

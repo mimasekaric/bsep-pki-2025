@@ -29,7 +29,7 @@ public class PasswordResetListener implements ApplicationListener<OnPasswordRese
 
         String recipientAddress = user.getEmail();
         String subject = "Zahtev za Oporavak Lozinke";
-        String confirmationUrl = "http://localhost:4200/reset-password?token=" + token.getToken();
+        String confirmationUrl = "https://localhost:4200/reset-password?token=" + token.getToken();
         String message = "Dobili smo zahtev za resetovanje Vaše lozinke. Kliknite na link ispod da biste postavili novu lozinku:\n" + confirmationUrl;
 
         emailService.sendEmail(recipientAddress, subject, message);
