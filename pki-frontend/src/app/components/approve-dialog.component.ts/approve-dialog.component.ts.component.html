@@ -21,7 +21,7 @@
           Nemate dostupnih CA sertifikata
         </mat-option>
         <mat-option *ngFor="let cert of availableSigningCerts" [value]="cert.serialNumber">
-          {{ cert.subjectDN }}
+          {{ cert.subjectDN | parseDn }} (SN: {{ cert.serialNumber }}, Važi do: {{ cert.validTo | date:'dd.MM.yyyy.' }})
         </mat-option>
       </mat-select>
     </mat-form-field>

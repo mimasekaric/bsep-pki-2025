@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -32,7 +33,9 @@ public class CertificateController {
     private final CertificateService certificateService;
     private final UserService userService;
 
-    @PostMapping("/issue-root") // todo: dodati pre authorize
+
+    @PostMapping("/issue-root")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> issueRoot(@RequestBody CertificateIssueDTO dto, Principal principal) {
 
 
@@ -60,9 +63,12 @@ public class CertificateController {
         }*/
     }
 
+
     @PostMapping("/issue")
-    //@PreAuthorize("hasAnyAuthority('ADMIN', 'CA_USER', 'ORDINARY_USER')")
-    public ResponseEntity<?> issueCertificate(@RequestBody CertificateIssueDTO dto) {
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')")
+
+    public ResponseEntity<?> issueCertificate(@RequestBody CertificateIssueDTO dto, Authentication authentication) {
+
         try {
             Object result = certificateService.issueCertificate(dto);
             return new ResponseEntity<>(result, HttpStatus.CREATED);
@@ -70,7 +76,9 @@ public class CertificateController {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
+
     @GetMapping("/download/{certificateId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadCertificate(@PathVariable Long certificateId) {
         try {
             // Load the complete certificate chain
@@ -95,13 +103,14 @@ public class CertificateController {
     }
 
     @GetMapping("/issuers")
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA', 'ROLE_USER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')")
     public ResponseEntity<List<IssuerDto>> getAvailableIssuers() {
         List<IssuerDto> issuers = certificateService.getPotentialIssuers();
         return ResponseEntity.ok(issuers);
     }
 
     @GetMapping("/potential-subjects")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')")
     public ResponseEntity<List<UserSubjectDto>> getPotentialCertificateSubjects() {
         List<User> users = userService.findPotentialCertificateSubjects();
 
@@ -139,7 +148,7 @@ public class CertificateController {
     }
 
     @GetMapping("/endEntityCertificates")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('ROLE_ORDINARY_USER')")
     public ResponseEntity<List<CertificateDetailsDTO>> getUserEndEntityCertificates(
             Principal principal
     ) {
@@ -151,7 +160,7 @@ public class CertificateController {
         return ResponseEntity.ok(userCerts);
     }
     @GetMapping("/caCertificates")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')")
     public ResponseEntity<List<CertificateDetailsDTO>> getCaCertificates(
             Principal principal
     ) {

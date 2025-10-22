@@ -9,6 +9,7 @@ import com.bsep.pki.services.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.mapstruct.control.MappingControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,11 +25,13 @@ public class UserController {
     private final IUserService userService;
 
     @GetMapping("/ca")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<List<UserResponseDTO>> getCaUsers() {
         List<UserResponseDTO> caUsers = userService.findUsersByRole(UserRole.CA_USER);
         return ResponseEntity.ok(caUsers);
     }
     @PostMapping("/create-ca-user")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> createCAUser(@RequestBody CAUserRegistrationDTO caUserDTO,
                                           Authentication authentication) {
         try {
@@ -44,6 +47,7 @@ public class UserController {
     }
 
     @PostMapping("/change-password")
+    @PreAuthorize("hasAuthority('ROLE_CA_USER')")
     public ResponseEntity<LoginResponseDTO> changePasswordForCA(@RequestBody ChangePasswordDTO changePasswordDTO,
                                                            Authentication authentication) {
         try {

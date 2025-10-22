@@ -33,6 +33,7 @@ public class CSRController {
     private final UserService userService;
 
     @PostMapping("/submit")
+    @PreAuthorize("hasAuthority('ROLE_ORDINARY_USER')")
     public ResponseEntity<CSR> submitCsr(@RequestBody CSRRequestDTO dto, Principal principal) {
 
         String userEmail = principal.getName();
@@ -42,6 +43,7 @@ public class CSRController {
     }
 
     @PostMapping("/{csrId}/approve")
+    @PreAuthorize("hasAuthority('ROLE_CA_USER')")
     public ResponseEntity<CertificateDetailsDTO> approveCsr(
             @PathVariable Long csrId, @RequestBody ApproveCsrDTO approveCsrDTO
     ) throws Exception {
@@ -51,7 +53,7 @@ public class CSRController {
 
 
     @GetMapping("/pending")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')") // Osigurajmo endpoint
+    @PreAuthorize("hasAuthority('ROLE_CA_USER')")
     public ResponseEntity<List<CSR>> getPendingCsrs(Principal principal) {
         String adminEmail = principal.getName();
         User issuer = userService.findByEmail(adminEmail);
@@ -61,7 +63,7 @@ public class CSRController {
     }
 
     @PostMapping("/{csrId}/reject")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_CA_USER')")
+    @PreAuthorize("hasAuthority('ROLE_CA_USER')")
     public ResponseEntity<CSR> rejectCsr(@PathVariable Long csrId, @RequestBody RejectCsrDTO dto) {
         CSR rejectedCsr = csrService.rejectCsr(csrId, dto.getRejectionReason());
         return ResponseEntity.ok(rejectedCsr);
